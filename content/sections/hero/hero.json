@@ -1,0 +1,22 @@
+{
+  "intro": "Hello!",
+  "heroPhoto": {
+    "src": "../../images/lego-dummy.png",
+    "alt": "My Photo"
+  },
+  "image": {
+    "src": "../../images/waving-hand.png",
+    "alt": "Waving Hand Emoji"
+  },
+  "title": "I'm Havefunatcode",
+  "subtitle": {
+    "prefix": "I am a person who tries to be a ",
+    "highlight": "better person than yesterday",
+    "suffix": "."
+  },
+  "description": "Striving not just to code, but to craft elegant solutions, my aspiration is to evolve into a proficient software engineer, creating meaningful and impactful applications.",
+  "socialProfiles": {
+    "from": ["LinkedIn", "Github", "Mail"],
+    "showIcons": false
+  }
+}
