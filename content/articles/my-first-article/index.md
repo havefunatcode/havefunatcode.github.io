@@ -19,7 +19,7 @@ keywords:
 ## Code block test
 
 ```css
-.AClass .Subtitle {
+.AClass .Subtitle {  
   margin: -0.5rem 0 0 0;
   font-weight: 700;
   font-size: 1.25rem;
