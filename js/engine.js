@@ -200,7 +200,10 @@ export class Game {
   render() {
     const ctx = this.ctx;
     const cam = this.cam;
-    this.sprites.drawBackground(ctx, cam, this.t, this.viewW);
+    // 진행도(0=시작/저녁 → 1=보물상자/오전): 카메라가 얼마나 전진했는지
+    const denom = Math.max(1, this.level.worldWidth - this.viewW);
+    const progress = clamp(cam.x / denom, 0, 1);
+    this.sprites.drawBackground(ctx, cam, this.t, this.viewW, progress);
 
     ctx.save();
     ctx.translate(-Math.round(cam.x), 0);
