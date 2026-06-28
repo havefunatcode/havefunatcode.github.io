@@ -126,6 +126,11 @@ function resize() {
 }
 addEventListener("resize", resize);
 addEventListener("orientationchange", resize);
+addEventListener("load", resize);
+// 인포바 출현·DevTools 토글 등 '리사이즈 이벤트 없는' 레이아웃 변화까지 잡는다.
+try {
+  new ResizeObserver(resize).observe(document.getElementById("stage"));
+} catch (_) {}
 resize();
 
 // 터치 디바이스면 터치 컨트롤 활성화
