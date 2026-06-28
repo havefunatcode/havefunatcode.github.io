@@ -60,12 +60,12 @@ export function initUI({ input, audio, onStart, onSkip, onClose }) {
   });
 
   return {
-    // PDF 지연 로드: 모달을 처음 열 때만 <object>에 data 주입(초기 1.1MB 미로드)
+    // PDF 지연 로드: 데스크톱에서 모달을 처음 열 때만 <object>에 data 주입(초기 1.1MB 미로드).
+    // 모바일은 인라인 뷰어 대신 카드 링크를 쓰므로 주입하지 않음.
     loadPdf() {
-      const wrap = $("pdf-wrap");
-      if (!wrap || getComputedStyle(wrap).display === "none") return;
-      const obj = wrap.querySelector("object");
-      if (obj && !obj.getAttribute("data") && obj.dataset.src) {
+      const obj = document.querySelector("#pdf-wrap .pdf-object");
+      if (!obj || getComputedStyle(obj).display === "none") return;
+      if (!obj.getAttribute("data") && obj.dataset.src) {
         obj.setAttribute("data", obj.dataset.src);
       }
     },
@@ -136,9 +136,14 @@ function buildModal() {
       </div>
 
       <div id="pdf-wrap" class="pdf-wrap">
-        <object data-src="${esc(LINKS.resumePdf)}#view=FitH" type="application/pdf" aria-label="포트폴리오 PDF">
-          <p class="pdf-fallback">PDF를 인라인으로 표시할 수 없습니다. 위의 ‘새 탭에서 열기’ 버튼을 이용해주세요.</p>
+        <object class="pdf-object" data-src="${esc(LINKS.resumePdf)}#view=FitH" type="application/pdf" aria-label="포트폴리오 PDF">
+          <p class="pdf-fallback">PDF를 인라인으로 표시할 수 없습니다. 아래 ‘새 탭에서 열기’ 버튼을 이용해주세요.</p>
         </object>
+        <a class="pdf-mobile-card" href="${esc(LINKS.resumePdf)}" target="_blank" rel="noopener">
+          <span class="pdf-mobile-ic">📄</span>
+          <span class="pdf-mobile-t">탭하여 포트폴리오 PDF 보기</span>
+          <span class="pdf-mobile-sub">새 탭에서 열립니다</span>
+        </a>
       </div>
 
       <h2 class="m-h2">주요 프로젝트</h2>

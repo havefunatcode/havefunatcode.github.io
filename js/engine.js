@@ -132,6 +132,7 @@ export class Game {
     this.state = "title"; // 'title' | 'play' | 'modal'
     this.player = makePlayer(level);
     this.cam = { x: 0 };
+    this.viewW = VIEW_W; // 화면 비율에 따라 main에서 동적 갱신(세로 VIEW_H는 고정)
     this.coins = 0;
     this.totalCoins = level.coins.length;
     this.t = 0;
@@ -182,11 +183,11 @@ export class Game {
       }
     }
 
-    // 카메라
+    // 카메라 (동적 가로 폭 기준)
     this.cam.x = clamp(
-      this.player.x + this.player.w / 2 - VIEW_W / 2,
+      this.player.x + this.player.w / 2 - this.viewW / 2,
       0,
-      Math.max(0, this.level.worldWidth - VIEW_W)
+      Math.max(0, this.level.worldWidth - this.viewW)
     );
 
     // 걷기 애니메이션 위상
@@ -199,7 +200,7 @@ export class Game {
   render() {
     const ctx = this.ctx;
     const cam = this.cam;
-    this.sprites.drawBackground(ctx, cam, this.t);
+    this.sprites.drawBackground(ctx, cam, this.t, this.viewW);
 
     ctx.save();
     ctx.translate(-Math.round(cam.x), 0);

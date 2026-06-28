@@ -8,9 +8,7 @@ import { PROJECTS } from "../data/portfolio.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-canvas.width = VIEW_W;
-canvas.height = VIEW_H;
-ctx.imageSmoothingEnabled = false;
+// 백킹 해상도는 resize()에서 화면 비율에 맞춰 동적으로 설정한다.
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const input = { left: false, right: false, jump: false };
@@ -109,11 +107,17 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) clearInput();
 });
 
-// ── 반응형 캔버스(레터박스, 픽셀 유지) ──────────────────────────
+// ── 반응형 캔버스(화면을 꽉 채우는 동적 가로 폭, 픽셀 유지) ──────────
+// 세로(VIEW_H)는 고정 → 점프/지면 등 세로 게임플레이 일관. 가로 폭은 화면 비율에 맞춰 변동.
 function resize() {
-  // 가로/세로 모두에 맞춰 축소 허용(1배 미만 허용) → 세로 모바일에서도 전체 폭이 들어옴
-  const scale = Math.min(innerWidth / VIEW_W, innerHeight / VIEW_H);
-  canvas.style.width = Math.floor(VIEW_W * scale) + "px";
+  const aspect = innerWidth / innerHeight;
+  const viewW = Math.round(Math.min(1000, Math.max(360, VIEW_H * aspect)));
+  canvas.width = viewW; // 백킹 변경 시 ctx 상태가 초기화됨 → 아래서 재설정
+  canvas.height = VIEW_H;
+  ctx.imageSmoothingEnabled = false;
+  game.viewW = viewW;
+  const scale = Math.min(innerWidth / viewW, innerHeight / VIEW_H);
+  canvas.style.width = Math.floor(viewW * scale) + "px";
   canvas.style.height = Math.floor(VIEW_H * scale) + "px";
 }
 addEventListener("resize", resize);

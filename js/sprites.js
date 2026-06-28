@@ -61,13 +61,13 @@ const PLAYER = bake(PLAYER_PX, PAL_PLAYER);
 const COIN = bake(COIN_PX, PAL_COIN);
 
 export const Sprites = {
-  drawBackground(ctx, cam, t) {
+  drawBackground(ctx, cam, t, viewW = VIEW_W) {
     // 하늘
     const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
     g.addColorStop(0, "#aee4ff");
     g.addColorStop(1, "#eafaff");
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, viewW, VIEW_H);
 
     // 해
     ctx.fillStyle = "#fff2b0";
@@ -78,16 +78,17 @@ export const Sprites = {
     // 구름 (reduced-motion이면 표류 정지)
     const tt = this.reduced ? 0 : t;
     ctx.fillStyle = "rgba(255,255,255,0.9)";
-    const span = VIEW_W + 140;
-    for (let i = 0; i < 4; i++) {
+    const span = viewW + 140;
+    const n = Math.ceil(viewW / 160) + 2;
+    for (let i = 0; i < n; i++) {
       let cx = ((i * 160 - cam.x * 0.2 - tt * 6) % span + span) % span - 70;
       const cy = 36 + (i % 3) * 22;
       this._cloud(ctx, cx, cy);
     }
 
     // 먼 언덕 / 가까운 언덕
-    this._band(ctx, cam.x * 0.25, 196, "#c4ebd1", 40);
-    this._band(ctx, cam.x * 0.45, 218, "#9ed9b1", 34);
+    this._band(ctx, cam.x * 0.25, 196, "#c4ebd1", 40, viewW);
+    this._band(ctx, cam.x * 0.45, 218, "#9ed9b1", 34, viewW);
   },
 
   _cloud(ctx, x, y) {
@@ -98,12 +99,12 @@ export const Sprites = {
     ctx.fill();
   },
 
-  _band(ctx, offset, baseY, color, r) {
+  _band(ctx, offset, baseY, color, r, viewW = VIEW_W) {
     ctx.fillStyle = color;
-    ctx.fillRect(0, baseY, VIEW_W, VIEW_H - baseY);
+    ctx.fillRect(0, baseY, viewW, VIEW_H - baseY);
     const span = r * 2;
     let start = -((offset % span) + span) % span;
-    for (let x = start; x < VIEW_W + span; x += span) {
+    for (let x = start; x < viewW + span; x += span) {
       ctx.beginPath();
       ctx.arc(x + r, baseY, r, Math.PI, 0);
       ctx.fill();
