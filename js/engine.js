@@ -4,6 +4,7 @@
 
 export const VIEW_W = 480;
 export const VIEW_H = 270;
+export const COIN_SIZE = 8; // 코인 스프라이트/히트박스 공유 크기(px)
 
 // 물리 상수 (단위: px, 초)
 export const PHYS = {
@@ -117,12 +118,14 @@ export function makePlayer(level) {
 // 브라우저 전용 게임 컨트롤러 (sprites/audio 주입)
 // ───────────────────────────────────────────────────────────────
 export class Game {
-  constructor({ ctx, level, sprites, audio, input, onCoin, onTreasure }) {
+  constructor({ ctx, level, sprites, audio, input, reduced = false, onCoin, onTreasure }) {
     this.ctx = ctx;
     this.level = level;
     this.sprites = sprites;
     this.audio = audio;
     this.input = input; // { left,right,jump } 불리언
+    this.reduced = reduced; // prefers-reduced-motion
+    this.sprites.reduced = reduced;
     this.onCoin = onCoin;
     this.onTreasure = onTreasure;
 
@@ -171,7 +174,7 @@ export class Game {
 
     // 코인 수집
     for (const c of this.level.coins) {
-      if (!c.got && intersect(this.player, { x: c.x, y: c.y, w: 8, h: 8 })) {
+      if (!c.got && intersect(this.player, { x: c.x, y: c.y, w: COIN_SIZE, h: COIN_SIZE })) {
         c.got = true;
         this.coins++;
         this.audio.coin();
@@ -204,9 +207,11 @@ export class Game {
     // 솔리드(지면/발판)
     for (const s of this.level.solids) this.sprites.drawTile(ctx, s);
 
-    // 코인
+    // 코인 (reduced-motion이면 진동 정지)
     for (const c of this.level.coins) {
-      if (!c.got) this.sprites.drawCoin(ctx, c.x, c.y + Math.sin(this.t * 4 + c.x) * 1.5, this.t);
+      if (c.got) continue;
+      const cy = this.reduced ? c.y : c.y + Math.sin(this.t * 4 + c.x) * 1.5;
+      this.sprites.drawCoin(ctx, c.x, cy);
     }
 
     // 보물상자

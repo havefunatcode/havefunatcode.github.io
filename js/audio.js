@@ -2,8 +2,13 @@
 export class Audio {
   constructor() {
     this.ctx = null;
-    // 기본값: 소리 켜짐. 사용자가 끈 적 있으면 기억.
-    this.enabled = localStorage.getItem("sfx") !== "off";
+    // 기본값: 소리 켜짐(첫 사용자 입력 전엔 무음). 사용자가 끈 적 있으면 기억.
+    // 스토리지가 차단된 환경(샌드박스 iframe/사생활 모드)에서도 안전하게 폴백.
+    let stored = null;
+    try {
+      stored = localStorage.getItem("sfx");
+    } catch (_) {}
+    this.enabled = stored !== "off";
   }
 
   // 사용자 제스처(시작 클릭)에서 호출 → AudioContext 생성/재개
@@ -17,7 +22,9 @@ export class Audio {
 
   setEnabled(on) {
     this.enabled = on;
-    localStorage.setItem("sfx", on ? "on" : "off");
+    try {
+      localStorage.setItem("sfx", on ? "on" : "off");
+    } catch (_) {}
   }
 
   _beep(freq, dur, type = "square", vol = 0.15, slideTo = null) {

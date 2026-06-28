@@ -59,9 +59,9 @@
 - 캐릭터를 가로로 추적하는 사이드 스크롤 카메라. 세로는 고정 또는 약한 추적.
 
 ### 3.5 연출
-- 코인 획득 SFX + 작은 파티클.
-- 보물상자 도달 → 상자 열림 스프라이트 → 빛/파티클 → 0.4s 후 모달 페이드인.
-- `prefers-reduced-motion` 시 파티클/흔들림 최소화.
+- 코인 획득 SFX + 토스트(프로젝트명). (파티클은 선택적 향후 강화)
+- 보물상자 도달 → 상자 열림(빛 효과) → 모달 등장(CSS pop/페이드).
+- `prefers-reduced-motion` 시 코인 진동·구름 표류·상자 빛 등 비필수 idle 모션 정지.
 
 ## 4. 보물 모달 명세 (= 포트폴리오)
 
@@ -101,9 +101,9 @@ portfolio.pdf         보물 PDF (사이트 루트)
 ```
 
 ### 모듈 책임 / 인터페이스 (요지)
-- `engine.js`: `update(dt)`, `render(ctx)`, 충돌은 `level.solidAt(x,y,w,h)`에 위임.
-  외부엔 게임 상태 전환 콜백(`onReachChest`)만 노출.
-- `level.js`: 순수 데이터 + 질의 함수. 렌더/입력 모름.
+- `engine.js`: 순수 물리(`stepPlayer`/`intersect`) + `Game.update(dt)`/`render()`.
+  충돌은 `level.solids`(AABB 사각형 배열)을 순회해 per-axis 해소. 상태 전환은 `onCoin`/`onTreasure` 콜백으로만 외부에 알림.
+- `level.js`: 순수 데이터(solids/coins/chest/start 좌표). 렌더/입력 모름.
 - `ui.js`: DOM만 다룸. `openTreasureModal(data)` / `showSkip()` / `mountTouchControls(input)`.
   게임 로직 모름. 게임→UI는 콜백/이벤트로만 통신.
 - `data/portfolio.js`: 표시용 데이터. 경력 변경 시 이 파일만 수정.
@@ -134,14 +134,16 @@ export const LINKS = {
 
 ## 7. 모바일 & 접근성
 - 작은 화면/터치 디바이스 자동 감지 → 터치 D-패드 + 점프 버튼 오버레이.
-- 키보드만으로 완주 가능. 모달 포커스 트랩, `Esc` 닫기.
-- `prefers-reduced-motion` 존중. 사운드 기본 음소거 + 토글(localStorage 기억).
+- 키보드만으로 완주 가능. 모달 포커스 트랩 + 닫을 때 포커스 복원, `Esc` 닫기.
+- `prefers-reduced-motion` 존중. 사운드 기본 켜짐(첫 사용자 입력 전엔 무음) + 음소거 토글(localStorage 기억).
+- 페이지 확대(pinch-zoom) 허용(WCAG 1.4.4). 창 포커스 상실 시 입력 키 고착 방지.
 - 스킵 버튼은 타이틀/플레이 어디서나 노출 → 접근성 보장.
 
 ## 8. 에셋 & 사운드
-- 픽셀 스프라이트: **CC0 라이선스 무료 에셋팩**(예: Kenney.nl 픽셀 플랫포머) 또는 미니멀 자체 제작.
-  라이선스가 명확히 안전한 것만 사용하고 출처를 `assets/CREDITS.md`에 기록.
-- SFX(점프/코인/상자): CC0. 기본 음소거, 토글 제공.
+- 픽셀 스프라이트(캐릭터·코인)·지면·상자·배경: **전부 코드로 생성/렌더**(`js/sprites.js`).
+  외부 이미지 0개 → 제3자 라이선스 무관. (`assets/CREDITS.md`에 명시)
+- SFX(점프/코인/낙하/보물): **Web Audio로 합성**(`js/audio.js`), 오디오 파일 0개.
+  기본 켜짐(첫 제스처 후 재생), 음소거 토글 제공.
 
 ## 9. 배포 전략
 현재: GitHub Pages가 `deploy` 브랜치 루트를 서빙(legacy). `main` = Gatsby 소스, `deploy` = 빌드본.

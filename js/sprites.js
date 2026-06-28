@@ -85,11 +85,12 @@ export const Sprites = {
     ctx.arc(64, 52, 22, 0, Math.PI * 2);
     ctx.fill();
 
-    // 구름
+    // 구름 (reduced-motion이면 표류 정지)
+    const tt = this.reduced ? 0 : t;
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     const span = VIEW_W + 140;
     for (let i = 0; i < 4; i++) {
-      let cx = ((i * 160 - cam.x * 0.2 - t * 6) % span + span) % span - 70;
+      let cx = ((i * 160 - cam.x * 0.2 - tt * 6) % span + span) % span - 70;
       const cy = 36 + (i % 3) * 22;
       this._cloud(ctx, cx, cy);
     }
@@ -185,9 +186,9 @@ export const Sprites = {
       ctx.fillRect(x - 1, y - h * 0.38, w + 2, h * 0.42);
       ctx.fillStyle = "#e8b23a";
       ctx.fillRect(x - 1, y - h * 0.38, w + 2, 3);
-      // 빛
+      // 빛 (reduced-motion이면 정적)
       ctx.save();
-      ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 6);
+      ctx.globalAlpha = this.reduced ? 0.7 : 0.55 + 0.25 * Math.sin(t * 6);
       ctx.fillStyle = "#fff4c2";
       ctx.fillRect(x + 2, y, w - 4, h * 0.42);
       ctx.restore();

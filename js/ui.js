@@ -25,7 +25,11 @@ export function initUI({ input, audio, onStart, onSkip, onClose }) {
 
   // 음소거
   const muteBtn = $("mute");
-  const renderMute = () => (muteBtn.textContent = audio.enabled ? "🔊" : "🔇");
+  const renderMute = () => {
+    muteBtn.textContent = audio.enabled ? "🔊" : "🔇";
+    muteBtn.setAttribute("aria-pressed", String(!audio.enabled));
+    muteBtn.setAttribute("aria-label", audio.enabled ? "소리 끄기" : "소리 켜기");
+  };
   renderMute();
   muteBtn.addEventListener("click", () => {
     audio.setEnabled(!audio.enabled);
@@ -37,7 +41,34 @@ export function initUI({ input, audio, onStart, onSkip, onClose }) {
   bindHold("t-right", "right", input);
   bindHold("t-jump", "jump", input);
 
+  // 모달 포커스 트랩(Tab/Shift+Tab을 모달 내부로 순환)
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab" || document.body.dataset.state !== "modal") return;
+    const f = $("modal").querySelectorAll(
+      'button, a[href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (!f.length) return;
+    const first = f[0];
+    const lastF = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      lastF.focus();
+    } else if (!e.shiftKey && document.activeElement === lastF) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
   return {
+    // PDF 지연 로드: 모달을 처음 열 때만 <object>에 data 주입(초기 1.1MB 미로드)
+    loadPdf() {
+      const wrap = $("pdf-wrap");
+      if (!wrap || getComputedStyle(wrap).display === "none") return;
+      const obj = wrap.querySelector("object");
+      if (obj && !obj.getAttribute("data") && obj.dataset.src) {
+        obj.setAttribute("data", obj.dataset.src);
+      }
+    },
     toast(text) {
       const el = $("toast");
       el.textContent = text;
@@ -101,7 +132,7 @@ function buildModal() {
       </div>
 
       <div id="pdf-wrap" class="pdf-wrap">
-        <object data="${esc(LINKS.resumePdf)}#view=FitH" type="application/pdf" aria-label="포트폴리오 PDF">
+        <object data-src="${esc(LINKS.resumePdf)}#view=FitH" type="application/pdf" aria-label="포트폴리오 PDF">
           <p class="pdf-fallback">PDF를 인라인으로 표시할 수 없습니다. 위의 ‘새 탭에서 열기’ 버튼을 이용해주세요.</p>
         </object>
       </div>

@@ -40,7 +40,8 @@ const coins = [
 ].map((c) => ({ ...c, got: false }));
 
 // 보물상자: 최종 지면 위
-const chest = { x: 2400, y: 230 - 36, w: 44, h: 36 };
+const CHEST_H = 36;
+const chest = { x: 2400, y: GROUND_Y - CHEST_H, w: 44, h: CHEST_H };
 
 export const LEVEL = {
   worldWidth: WORLD_W,

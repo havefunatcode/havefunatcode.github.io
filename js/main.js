@@ -12,10 +12,13 @@ canvas.width = VIEW_W;
 canvas.height = VIEW_H;
 ctx.imageSmoothingEnabled = false;
 
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const input = { left: false, right: false, jump: false };
 const audio = new Audio();
 
 let prevState = "title";
+let lastFocus = null; // 모달 열기 직전 포커스(닫을 때 복원)
+
 function setState(s) {
   game.state = s;
   document.body.dataset.state = s;
@@ -27,6 +30,7 @@ const game = new Game({
   sprites: Sprites,
   audio,
   input,
+  reduced,
   onCoin: (i) => ui.toast(`프로젝트 ${i + 1}. ${PROJECTS[i].title}`),
   onTreasure: () => openTreasure(),
 });
@@ -34,37 +38,55 @@ const game = new Game({
 const ui = initUI({
   input,
   audio,
-  onStart: () => {
-    audio.unlock();
-    game.reset();
-    setState("play");
-  },
+  onStart: startGame,
   onSkip: () => {
     audio.unlock();
     openTreasure();
   },
-  onClose: () => setState(prevState === "title" ? "title" : "play"),
+  onClose: closeModal,
 });
 
+function startGame() {
+  audio.unlock();
+  game.reset();
+  setState("play");
+}
+
 function openTreasure() {
-  // 모달 진입 전 현재 화면을 기억 → 닫을 때 그 화면으로 복귀
-  // (보물상자 열기는 항상 play 중, 타이틀 스킵은 title, 플레이 중 스킵은 play)
-  if (game.state !== "modal") prevState = game.state;
+  // 모달 진입 전 현재 화면/포커스를 기억 → 닫을 때 복귀
+  if (game.state !== "modal") {
+    prevState = game.state;
+    lastFocus = document.activeElement;
+  }
   audio.treasure();
   setState("modal");
+  ui.loadPdf(); // 지연 로드: 모달을 처음 열 때만 PDF를 주입
   ui.focusModal();
+}
+
+function closeModal() {
+  setState(prevState === "title" ? "title" : "play");
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
 }
 
 // ── 키보드 입력 ──────────────────────────────────────────────
 const KEYS_LEFT = ["ArrowLeft", "a", "A"];
 const KEYS_RIGHT = ["ArrowRight", "d", "D"];
 const KEYS_JUMP = ["ArrowUp", "w", "W", " ", "Spacebar"];
+const isInteractive = (el) =>
+  el && ["BUTTON", "A", "INPUT", "TEXTAREA", "SELECT"].includes(el.tagName);
 
 addEventListener("keydown", (e) => {
-  if (KEYS_JUMP.includes(e.key)) e.preventDefault();
-  if (document.body.dataset.state === "title" && (e.key === "Enter" || e.key === " ")) {
-    ui_start();
+  const st = document.body.dataset.state;
+  // 타이틀에서 Enter/Space로 시작 (단, 버튼/링크에 포커스가 있으면 그쪽에 양보)
+  if (st === "title" && (e.key === "Enter" || e.key === " ") && !isInteractive(document.activeElement)) {
+    e.preventDefault();
+    startGame();
     return;
+  }
+  // 플레이 중 점프키의 페이지 스크롤만 차단(모달/폼 포커스는 건드리지 않음)
+  if (st === "play" && KEYS_JUMP.includes(e.key) && !isInteractive(document.activeElement)) {
+    e.preventDefault();
   }
   if (KEYS_LEFT.includes(e.key)) input.left = true;
   if (KEYS_RIGHT.includes(e.key)) input.right = true;
@@ -75,19 +97,27 @@ addEventListener("keyup", (e) => {
   if (KEYS_RIGHT.includes(e.key)) input.right = false;
   if (KEYS_JUMP.includes(e.key)) input.jump = false;
 });
-function ui_start() {
-  audio.unlock();
-  game.reset();
-  setState("play");
+
+// 창 포커스 상실/탭 전환 시 키 고착 방지(누른 채 Alt-Tab 등)
+function clearInput() {
+  input.left = input.right = input.jump = false;
+  game.prevJump = false;
 }
+addEventListener("blur", clearInput);
+addEventListener("pagehide", clearInput);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearInput();
+});
 
 // ── 반응형 캔버스(레터박스, 픽셀 유지) ──────────────────────────
 function resize() {
-  const scale = Math.max(1, Math.min(innerWidth / VIEW_W, innerHeight / VIEW_H));
+  // 가로/세로 모두에 맞춰 축소 허용(1배 미만 허용) → 세로 모바일에서도 전체 폭이 들어옴
+  const scale = Math.min(innerWidth / VIEW_W, innerHeight / VIEW_H);
   canvas.style.width = Math.floor(VIEW_W * scale) + "px";
   canvas.style.height = Math.floor(VIEW_H * scale) + "px";
 }
 addEventListener("resize", resize);
+addEventListener("orientationchange", resize);
 resize();
 
 // 터치 디바이스면 터치 컨트롤 활성화
