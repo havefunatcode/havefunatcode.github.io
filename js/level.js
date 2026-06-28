@@ -11,7 +11,7 @@ import { COIN_SIZE } from "./engine.js";
 
 const GROUND_Y = 230;
 const GROUND_H = 70;
-const WORLD_W = 2900;
+const WORLD_W = 2420;
 
 // 지면 세그먼트(사이 50px 구덩이)
 const ground = [
@@ -49,8 +49,8 @@ const platDefs = [
   // 5) 중간 높이 한 번 점프
   { x: 1820, y: 186, w: 60, coin: 5 },
 
-  // 6) 보물상자 직전 발판
-  { x: 2520, y: 190, w: 60, coin: 6 },
+  // 6) 보물상자 직전 발판 (6→7 거리 단축)
+  { x: 2240, y: 190, w: 60, coin: 6 },
 ];
 
 const platforms = platDefs.map((p) => ({ x: p.x, y: p.y, w: p.w, h: 14, kind: "platform" }));
@@ -69,7 +69,7 @@ const coins = platDefs
 
 // 보물상자: 최종 지면 위
 const CHEST_H = 36;
-const chest = { x: 2660, y: GROUND_Y - CHEST_H, w: 44, h: CHEST_H };
+const chest = { x: 2360, y: GROUND_Y - CHEST_H, w: 44, h: CHEST_H };
 
 export const LEVEL = {
   worldWidth: WORLD_W,

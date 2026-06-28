@@ -111,7 +111,11 @@ document.addEventListener("visibilitychange", () => {
 // 세로(VIEW_H)는 고정 → 점프/지면 등 세로 게임플레이 일관. 가로 폭은 화면 비율에 맞춰 변동.
 function resize() {
   const aspect = innerWidth / innerHeight;
-  const viewW = Math.round(Math.min(1000, Math.max(360, VIEW_H * aspect)));
+  // 가로 폭 = 화면비에 정확히 맞춤 → 캔버스 비율이 창과 같아 여백 없이 꽉 참.
+  // 단, 세로(모바일, aspect<1)만 과확대 방지를 위해 최소 폭을 둔다(이때만 레터박스).
+  let viewW = Math.min(1100, VIEW_H * aspect);
+  if (aspect < 1) viewW = Math.max(viewW, 360);
+  viewW = Math.round(viewW);
   canvas.width = viewW; // 백킹 변경 시 ctx 상태가 초기화됨 → 아래서 재설정
   canvas.height = VIEW_H;
   ctx.imageSmoothingEnabled = false;
