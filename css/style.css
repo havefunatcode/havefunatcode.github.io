@@ -1,0 +1,287 @@
+:root {
+  --ink: #0e1422;
+  --gold: #ffd24a;
+  --accent: #4a86c5;
+  --card: #16203a;
+  --line: rgba(255, 255, 255, 0.1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0f1c;
+  color: #eaf2ff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+    "Noto Sans KR", Roboto, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 무대 + 캔버스 */
+#stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #18233f, #0a0f1c 70%);
+}
+#game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+}
+
+/* 상단 버튼 */
+#topbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 6;
+}
+.icon-btn, .pill-btn {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: rgba(12, 18, 34, 0.7);
+  color: #eaf2ff;
+  backdrop-filter: blur(6px);
+}
+.icon-btn { width: 38px; height: 38px; border-radius: 10px; font-size: 16px; }
+.pill-btn { padding: 0 14px; height: 38px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+.pill-btn:hover, .icon-btn:hover { background: rgba(74, 134, 197, 0.35); }
+body[data-state="modal"] #skip { display: none; }
+
+/* 오버레이 공통 */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 5;
+}
+body[data-state="title"] #title { display: flex; }
+body[data-state="modal"] #modal { display: flex; }
+
+/* 타이틀 */
+#title { background: rgba(8, 12, 24, 0.55); backdrop-filter: blur(3px); }
+.title-card {
+  text-align: center;
+  background: linear-gradient(160deg, #1a2748, #111a30);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 30px 34px 26px;
+  max-width: 460px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: pop 0.4s ease;
+}
+@keyframes pop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.title-badge {
+  display: inline-block;
+  font: 700 11px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 3px;
+  color: var(--gold);
+  border: 1px solid rgba(255, 210, 74, 0.4);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+.title-name { margin: 4px 0; font-size: 48px; letter-spacing: 2px; }
+.title-sub { margin: 0 0 14px; color: #9fb6d8; font-size: 14px; }
+.title-desc { margin: 0 0 16px; line-height: 1.7; font-size: 14px; color: #d7e3f6; }
+.title-keys {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: #c3d3ec;
+}
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 6px;
+  margin: 0 1px;
+  border: 1px solid var(--line);
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  background: #0e1730;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.title-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.title-hint { margin: 16px 0 0; font-size: 12px; color: #7e93b5; }
+
+/* 버튼 */
+.btn {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 11px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #1d2a48;
+  color: #eaf2ff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.btn:hover { background: #28395f; }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: linear-gradient(160deg, #ffd24a, #ffb43a); color: #2a1d00; border-color: #ffcf4a; }
+.btn.primary:hover { background: linear-gradient(160deg, #ffe07a, #ffc04a); }
+.btn.big { font-size: 16px; padding: 13px 26px; }
+
+/* 토스트 */
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  transform: translate(-50%, 12px);
+  background: rgba(12, 18, 34, 0.92);
+  border: 1px solid rgba(255, 210, 74, 0.5);
+  color: var(--gold);
+  padding: 9px 16px;
+  border-radius: 22px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 5;
+  max-width: 80vw;
+  text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* 모바일 터치 컨트롤 */
+#touch {
+  display: none;
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 16px 18px calc(16px + env(safe-area-inset-bottom));
+  justify-content: space-between;
+  align-items: flex-end;
+  z-index: 4;
+  pointer-events: none;
+}
+body.touch[data-state="play"] #touch { display: flex; }
+.dpad { display: flex; gap: 14px; }
+.tbtn {
+  pointer-events: auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(20, 30, 54, 0.7);
+  color: #eaf2ff;
+  font-size: 22px;
+  backdrop-filter: blur(4px);
+}
+.tbtn.jump { background: rgba(255, 210, 74, 0.28); border-color: rgba(255, 210, 74, 0.5); font-size: 16px; font-weight: 700; }
+.tbtn:active { background: rgba(74, 134, 197, 0.5); }
+
+/* 보물 모달 */
+#modal { background: rgba(6, 10, 20, 0.75); backdrop-filter: blur(4px); overflow: auto; }
+.modal-card {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 30px 30px 36px;
+  -webkit-user-select: text;
+  user-select: text;
+  animation: pop 0.35s ease;
+}
+.modal-close {
+  position: sticky;
+  float: right;
+  top: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #0e1730;
+  color: #eaf2ff;
+  cursor: pointer;
+  font-size: 16px;
+}
+.treasure-burst { color: var(--gold); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; }
+.m-name { margin: 2px 0 4px; font-size: 30px; }
+.m-name span { color: #9fb6d8; font-size: 18px; font-weight: 600; }
+.m-tagline { margin: 0 0 10px; color: var(--gold); font-weight: 700; }
+.m-intro { margin: 0 0 16px; line-height: 1.7; color: #d7e3f6; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.chip {
+  background: rgba(74, 134, 197, 0.18);
+  border: 1px solid rgba(74, 134, 197, 0.4);
+  color: #cfe2ff;
+  padding: 6px 11px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.m-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.pdf-wrap {
+  width: 100%;
+  height: 60vh;
+  min-height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0e1730;
+  margin-bottom: 26px;
+}
+.pdf-wrap object { width: 100%; height: 100%; border: 0; }
+.pdf-fallback { padding: 24px; color: #9fb6d8; text-align: center; }
+.m-h2 { font-size: 16px; margin: 22px 0 12px; color: #bcd0ef; border-left: 3px solid var(--gold); padding-left: 10px; }
+.projects { display: grid; gap: 12px; }
+.proj { background: #11192f; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.proj-head { display: flex; gap: 12px; align-items: flex-start; }
+.proj-no {
+  flex: 0 0 auto;
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  border-radius: 7px;
+  background: var(--gold); color: #2a1d00;
+  font-weight: 800; font-size: 13px;
+}
+.proj-title { font-weight: 700; font-size: 15px; }
+.proj-meta { color: #8ea4c6; font-size: 12.5px; margin-top: 2px; }
+.proj-impact { margin-top: 9px; line-height: 1.6; font-size: 13.5px; color: #d2deef; }
+.skills { display: flex; flex-wrap: wrap; gap: 8px; }
+.skill {
+  background: #1a2542;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 680px) {
+  .pdf-wrap { display: none; }
+  .title-name { font-size: 38px; }
+  .modal-card { padding: 22px 18px 28px; border-radius: 14px; }
+  .m-actions .btn { flex: 1 1 calc(50% - 10px); justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, .title-card, .modal-card { animation: none !important; }
+  #toast { transition: opacity 0.2s ease; }
+}

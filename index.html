@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1b2a4a" />
+  <title>이태호 | 서버 개발자 — 보물찾기 포트폴리오</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta name="description" content="방향키와 스페이스로 보물상자를 찾아 이태호의 포트폴리오를 열어보세요." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-state="title">
+  <div id="stage">
+    <canvas id="game" aria-label="플랫포머 게임 화면"></canvas>
+
+    <!-- 상단 우측 버튼 -->
+    <div id="topbar">
+      <button id="mute" class="icon-btn" aria-label="소리 켜기/끄기">🔊</button>
+      <button id="skip" class="pill-btn" aria-label="이력서 바로 보기">⏭ 이력서 바로 보기</button>
+    </div>
+
+    <!-- 타이틀 화면 -->
+    <div id="title" class="overlay">
+      <div class="title-card">
+        <div class="title-badge">PORTFOLIO QUEST</div>
+        <h1 class="title-name">이태호</h1>
+        <p class="title-sub">4년차 서버 개발자 · 보물찾기 포트폴리오</p>
+        <p class="title-desc">
+          캐릭터를 움직여 스테이지 끝의 <b>보물상자 🎁</b>를 찾으면<br />
+          이태호의 <b>포트폴리오</b>가 열립니다.
+        </p>
+        <div class="title-keys">
+          <span><kbd>←</kbd><kbd>→</kbd> 이동</span>
+          <span><kbd>Space</kbd> 점프 · 열기</span>
+        </div>
+        <div class="title-actions">
+          <button id="btn-start" class="btn primary big">▶ 시작하기</button>
+          <button id="btn-skip-title" class="btn">⏭ 이력서 바로 보기</button>
+        </div>
+        <p class="title-hint">진행 경로의 코인 7개 = 주요 프로젝트 7선</p>
+      </div>
+    </div>
+
+    <!-- 코인 획득 토스트 -->
+    <div id="toast" aria-live="polite"></div>
+
+    <!-- 모바일 터치 컨트롤 -->
+    <div id="touch">
+      <div class="dpad">
+        <button id="t-left" class="tbtn" aria-label="왼쪽">◀</button>
+        <button id="t-right" class="tbtn" aria-label="오른쪽">▶</button>
+      </div>
+      <button id="t-jump" class="tbtn jump" aria-label="점프 / 열기">↑</button>
+    </div>
+
+    <!-- 보물 모달 (내용은 ui.js가 채움) -->
+    <div id="modal" class="overlay" role="dialog" aria-modal="true" aria-label="포트폴리오"></div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
