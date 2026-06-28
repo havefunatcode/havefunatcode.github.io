@@ -132,6 +132,7 @@ function frame(now) {
   last = now;
   game.update(dt);
   game.render();
+  ui.setHud(game.coins, game.totalCoins);
   ui.updateChestHint(game.atChest && game.state === "play");
   requestAnimationFrame(frame);
 }

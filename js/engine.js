@@ -217,17 +217,10 @@ export class Game {
     // 보물상자
     this.sprites.drawChest(ctx, this.level.chest, this.state === "modal", this.t);
 
-    // 보물상자 근접 안내
-    if (this.atChest && this.state === "play") {
-      this.sprites.drawPrompt(ctx, this.level.chest, "Space! 보물 열기");
-    }
-
     // 플레이어
     this.sprites.drawPlayer(ctx, this.player, this.walkPhase);
 
     ctx.restore();
-
-    // HUD (스크린 좌표)
-    this.sprites.drawHUD(ctx, this.coins, this.totalCoins, this.state);
+    // HUD/힌트/안내 텍스트는 DOM(ui.js)에서 렌더 — 픽셀화 캔버스 텍스트 깨짐 방지
   }
 }

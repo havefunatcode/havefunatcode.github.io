@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#1b2a4a" />
-  <title>이태호 | 서버 개발자 — 보물찾기 포트폴리오</title>
+  <title>이태호 | 백엔드 개발자 — 보물찾기 포트폴리오</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <meta name="description" content="방향키와 스페이스로 보물상자를 찾아 이태호의 포트폴리오를 열어보세요." />
   <link rel="stylesheet" href="css/style.css" />
@@ -12,6 +12,11 @@
 <body data-state="title">
   <div id="stage">
     <canvas id="game" aria-label="플랫포머 게임 화면"></canvas>
+
+    <!-- HUD / 힌트 / 상자 안내 (DOM으로 렌더 → 선명) -->
+    <div id="hud" aria-live="polite"><span id="hud-coin"></span> 프로젝트 <span id="hud-count">0/7</span></div>
+    <div id="hint">← → 이동 · Space 점프</div>
+    <div id="chest-prompt">🎁 Space로 보물 열기!</div>
 
     <!-- 상단 우측 버튼 -->
     <div id="topbar">
@@ -24,7 +29,7 @@
       <div class="title-card">
         <div class="title-badge">PORTFOLIO QUEST</div>
         <h1 class="title-name">이태호</h1>
-        <p class="title-sub">4년차 서버 개발자 · 보물찾기 포트폴리오</p>
+        <p class="title-sub">4년차 백엔드 개발자 · 보물찾기 포트폴리오</p>
         <p class="title-desc">
           캐릭터를 움직여 스테이지 끝의 <b>보물상자 🎁</b>를 찾으면<br />
           이태호의 <b>포트폴리오</b>가 열립니다.

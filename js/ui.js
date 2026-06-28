@@ -76,8 +76,12 @@ export function initUI({ input, audio, onStart, onSkip, onClose }) {
       clearTimeout(el._t);
       el._t = setTimeout(() => el.classList.remove("show"), 1700);
     },
+    setHud(coins, total) {
+      $("hud-count").textContent = `${coins}/${total}`;
+    },
     updateChestHint(atChest) {
       $("t-jump").textContent = atChest ? "열기" : "↑";
+      $("chest-prompt").style.display = atChest ? "block" : "none";
     },
     focusModal() {
       $("modal-close").focus();

@@ -64,6 +64,35 @@ html, body {
 /* 모달에선 상단바 전체 숨김(닫기 버튼과 겹침/탭 충돌 방지) */
 body[data-state="modal"] #topbar { display: none; }
 
+/* HUD / 힌트 / 상자 안내 (DOM 렌더 → 어떤 배율에서도 선명) */
+#hud, #hint, #chest-prompt { position: absolute; z-index: 4; }
+#hud {
+  top: 12px; left: 12px;
+  display: none; align-items: center; gap: 7px;
+  background: rgba(16, 24, 44, 0.82); border: 1px solid var(--line);
+  color: #fff; padding: 7px 13px; border-radius: 11px;
+  font-size: 14px; font-weight: 700; backdrop-filter: blur(4px);
+}
+#hud-coin { width: 13px; height: 13px; border-radius: 50%; background: var(--gold); border: 1px solid #d98e1f; }
+#hud-count { color: var(--gold); }
+#hint {
+  left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: none;
+  background: rgba(16, 24, 44, 0.5); color: #dce8fb;
+  padding: 6px 15px; border-radius: 16px; font-size: 13px; pointer-events: none;
+}
+#chest-prompt {
+  left: 50%; bottom: 24%; transform: translateX(-50%);
+  display: none;
+  background: rgba(16, 24, 44, 0.92); border: 1px solid rgba(255, 210, 74, 0.6);
+  color: var(--gold); padding: 9px 18px; border-radius: 20px;
+  font-size: 15px; font-weight: 800; pointer-events: none;
+  animation: bob 0.9s ease-in-out infinite;
+}
+@keyframes bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -6px); } }
+body[data-state="play"] #hud, body[data-state="play"] #hint { display: flex; }
+body.touch[data-state="play"] #hint { display: none; } /* 터치엔 버튼이 있으므로 힌트 숨김 */
+
 /* 오버레이 공통 */
 .overlay {
   position: absolute;

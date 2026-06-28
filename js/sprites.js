@@ -60,16 +60,6 @@ function bake(px, pal) {
 const PLAYER = bake(PLAYER_PX, PAL_PLAYER);
 const COIN = bake(COIN_PX, PAL_COIN);
 
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 export const Sprites = {
   drawBackground(ctx, cam, t) {
     // 하늘
@@ -196,52 +186,5 @@ export const Sprites = {
     ctx.strokeStyle = "#3b2510";
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-  },
-
-  drawPrompt(ctx, c, text) {
-    const bx = c.x + c.w / 2;
-    ctx.font = "bold 9px sans-serif";
-    const tw = ctx.measureText(text).width;
-    const pw = tw + 12;
-    const ph = 15;
-    const px = bx - pw / 2;
-    const py = c.y - 24;
-    ctx.fillStyle = "rgba(20,20,30,0.88)";
-    roundRect(ctx, px, py, pw, ph, 4);
-    ctx.fill();
-    ctx.fillStyle = "#ffe08a";
-    ctx.textBaseline = "middle";
-    ctx.textAlign = "center";
-    ctx.fillText(text, bx, py + ph / 2 + 0.5);
-    ctx.textAlign = "left";
-  },
-
-  drawHUD(ctx, coins, total, state) {
-    if (state !== "play") return;
-    // 코인/프로젝트 카운터
-    ctx.fillStyle = "rgba(20,20,30,0.7)";
-    roundRect(ctx, 8, 8, 118, 20, 5);
-    ctx.fill();
-    ctx.fillStyle = "#ffd54a";
-    ctx.beginPath();
-    ctx.arc(20, 18, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#d98e1f";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 10px sans-serif";
-    ctx.textBaseline = "middle";
-    ctx.fillText(`프로젝트 ${coins}/${total}`, 30, 18.5);
-
-    // 하단 조작 힌트
-    ctx.font = "9px sans-serif";
-    const hint = "← → 이동 · Space 점프";
-    const hw = ctx.measureText(hint).width;
-    ctx.fillStyle = "rgba(20,20,30,0.4)";
-    roundRect(ctx, (VIEW_W - hw) / 2 - 8, VIEW_H - 22, hw + 16, 15, 5);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.fillText(hint, (VIEW_W - hw) / 2, VIEW_H - 14);
   },
 };

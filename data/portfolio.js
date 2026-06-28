@@ -1,78 +1,79 @@
-// 표시용 콘텐츠 데이터. 경력이 바뀌면 이 파일만 수정하면 된다.
-// 원천: ~/Documents/Resume/wert_intelligence_career_final.md + Notion 이력서
+// 표시용 콘텐츠 데이터(단일 소스). 경력이 바뀌면 이 파일만 수정한다.
+// 원천: 00_sources/career/감사로그 포함 이력서.md (최신)
 
 export const PROFILE = {
   name: "이태호",
-  title: "4년차 서버 개발자",
-  tagline: "대용량 데이터 처리 · 시스템 아키텍처 개선 · 서비스 안정화",
+  title: "4년차 백엔드 개발자",
+  tagline: "Billing · Audit Log 도메인 단독 설계 · 대용량 검색 안정화",
   intro:
-    "기술로 비즈니스 목표 달성에 기여해 온 서버 개발자입니다. 복잡한 문제를 끝까지 파고들어 실질적인 성과로 만드는 데 강점이 있습니다.",
+    "AI 활용으로 기술 문제 해결과 비즈니스 임팩트를 만들어내는 것을 즐기는 4년 차 백엔드 개발자입니다. 12개 마이크로서비스로 구성된 차세대 SaaS의 백엔드 아키텍처를 설계하고, Billing·Audit Log 시스템을 단독 설계했습니다.",
 };
 
-// 보물상자에서 보여줄 핵심 성과(시선 끌기용). 상세는 PDF.
+// 보물상자에서 강조할 핵심 성과(시선 끌기용). 상세는 PDF.
+// 강조: Billing · Audit Log / 제외: 비로그인 공유링크 · 크롤링 자동화 · 대용량 응답 속도
 export const HIGHLIGHTS = [
-  "검색 서버 재기동 3~4회/일 → 0회",
-  "대용량 응답 속도 75%↓ (Timeout 해결)",
-  "비로그인 공유링크 50만건 · OKR S등급",
-  "크롤링 자동화로 업무 95%↑ (3시간→10분)",
+  "Billing 시스템 단독 설계 — PortOne PG·동시성/멱등성 제어",
+  "Audit Log 시스템 단독 설계 — 엔터프라이즈 3곳 신규 계약",
+  "검색 서버 재기동 3~4회/일 → 0회 (무장애 운영)",
+  "12개 MSA 차세대 SaaS 백엔드 아키텍처 설계",
 ];
 
-// 프로젝트 7선 — 코인 7개와 1:1 매핑(index 순서 = 최신순)
+// 프로젝트(코인 7개와 1:1 매핑, 최신순) — Billing·Audit Log를 앞세움
 export const PROJECTS = [
   {
-    title: "개인정보 암호화 시스템 구축",
-    period: "2025.06 ~ 2025.07",
-    role: "암호화 시스템 설계 및 구현",
+    title: "워크스페이스 Audit Log 시스템 설계 및 개발",
+    period: "2026.03 ~ 2026.04",
+    role: "아키텍처 단독 설계 · 6개 도메인 적용",
     impact:
-      "MyBatis Interceptor 기반 하이브리드 암호화로 서비스 로직 변경 없이 보안 강화, ISO(27001/27017/27701/27018) 인증 기반 마련.",
+      "@Auditable AOP로 도메인-감사 코드 분리, SQS DLQ + 수동 redrive로 이벤트 누락 0건 보장. 보안 요건 미달로 보류됐던 엔터프라이즈 고객사 3곳과 신규 계약 체결.",
+  },
+  {
+    title: "B2B SaaS Billing 시스템 설계 및 개발",
+    period: "2025.12 ~ 2026.02",
+    role: "결제 도메인 아키텍처 단독 설계",
+    impact:
+      "PortOne PG 연동, 비관적 락·웹훅 멱등성으로 중복 결제 방지, REQUIRES_NEW로 실패 이력 100% 보존. SQS 비동기 토큰 차감의 데드락 장애를 분석·해결.",
+  },
+  {
+    title: "차세대 특허 검색 서비스 (MSA)",
+    period: "2025.08 ~ 2025.12",
+    role: "신규 SaaS 백엔드 아키텍처 설계 주도",
+    impact:
+      "회원/결제/검색/번역 등 12개 마이크로서비스로 분리, SQS 비동기 통신, Kubernetes + ArgoCD GitOps CD 구축. 초거대 SaaS 정부과제 심사 통과.",
+  },
+  {
+    title: "암호화 시스템 구축",
+    period: "2025.06 ~ 2025.07",
+    role: "DB 레벨 자동 암복호화 설계",
+    impact:
+      "MyBatis Interceptor 하이브리드 암호화로 서비스 코드 무수정 전면 적용. ISO 27001/27017/27018/27701 4종 인증 획득 기여.",
   },
   {
     title: "Keystone 검색 서버 안정화",
     period: "2025.02 ~ 2025.04",
-    role: "검색 서버 장애 처리 및 성능 개선",
+    role: "검색 서버 장애 진단 및 성능 개선",
     impact:
-      "하루 3~4회 재기동되던 검색 서버를 안정화해 재기동 0회 달성, Family 확장 속도 92% 개선(1.3분→15초).",
+      "ES 2.x→8.x 마이그레이션·wildcard 제거로 하루 3~4회 재기동을 0회로(이후 무장애), Family 확장 속도 92% 개선(1분 18초→15초).",
   },
   {
     title: "비로그인 문헌 공유 시스템 구축",
     period: "2024.06 ~ 2024.12",
     role: "신규 피처 설계 및 개발",
     impact:
-      "오픈 1개월 만에 공유 링크 50만 건 생성으로 신규 고객 유치, OKR 'S' 등급 달성.",
+      "UUID 기반 영구 공유 링크 + 구독 연동 접근 제어 설계. 오픈 1개월 만에 50만 건 생성, 분기 OKR 'S' 등급 달성.",
   },
   {
     title: "대용량 문헌 상세보기 성능 개선",
     period: "2023.04 ~ 2023.06",
     role: "데이터 구조 최적화 및 성능 개선",
     impact:
-      "데이터 가공·압축(평균 95% 축소)으로 1.5MB+ 요청 시 Timeout 해결, 응답 속도 75% 단축.",
-  },
-  {
-    title: "회원 후처리 로직 리팩토링",
-    period: "2023.03 ~ 2023.04",
-    role: "레거시 코드 리팩토링 및 모듈화",
-    impact:
-      "Command Pattern 적용으로 흩어진 후처리 로직 통합, 코드 중복 40% 감소·신규 기능 개발 기간 단축.",
-  },
-  {
-    title: "Monday.com 연동 및 어드민 기능 분리",
-    period: "2022.09 ~ 2023.04",
-    role: "시스템 아키텍처 개선",
-    impact:
-      "RabbitMQ 도입으로 어드민 기능을 핵심 서비스에서 비동기 분리, 장애 전파 방지·전체 안정성 향상.",
-  },
-  {
-    title: "공고 데이터 수집 자동화",
-    period: "2022.07 ~ 2022.09",
-    role: "크롤러 개발 및 자동화 시스템 구축",
-    impact:
-      "20여 개 사이트 크롤링·수집 자동화로 3시간 수작업을 10분으로 단축, 업무 효율 95% 개선.",
+      "데이터 가공·압축(평균 95% 축소) + ScyllaDB 적재로 1.5MB+ 요청의 Timeout 해결, 응답 속도 75% 단축.",
   },
 ];
 
 export const SKILLS = [
-  "Java", "Kotlin", "Spring Boot", "MySQL", "Linux",
-  "Nginx", "Docker", "Git", "RabbitMQ", "MyBatis", "JLPT N2",
+  "Java", "Kotlin", "Python", "Spring Boot", "JPA", "MySQL",
+  "Redis", "Elasticsearch", "Amazon SQS", "Kubernetes", "Docker", "AWS",
 ];
 
 export const LINKS = {
