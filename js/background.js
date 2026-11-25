@@ -229,9 +229,13 @@ const cloudImgs = []; // 종류별 첫 사용 때 한 번 굽는다
 const cloudImg = (k) => cloudImgs[k] || (cloudImgs[k] = bake(CLOUDS[k], PAL_CLOUD));
 // 주기 RIDGE_PERIOD 안의 배치(x, y, 종류)
 const CLOUD_LAYOUT = [[30, 26, 0], [250, 54, 1], [470, 18, 2], [690, 66, 0], [930, 36, 1], [1130, 78, 2]];
+// 구름 가로 오프셋(순수): 패럴랙스 + 표류. tt = 그리기 시계(reduced면 호출 쪽에서 0).
+export function cloudOffset(camX, tt) {
+  return Math.round(camX * PARALLAX.cloud + tt * CLOUD_DRIFT);
+}
 function drawClouds(ctx, s, cam, viewW, tt) {
   if (s.cloudA < 0.02) return;
-  const off = Math.round(cam.x * PARALLAX.cloud + tt * CLOUD_DRIFT);
+  const off = cloudOffset(cam.x, tt);
   ctx.globalAlpha = s.cloudA;
   for (const [x, y, k] of CLOUD_LAYOUT) {
     const img = cloudImg(k);
@@ -255,8 +259,9 @@ function drawRidge(ctx, name, base, shade, cam) {
 // 주기 P 안의 배치(x, 종류). 드문드문 무리 지어 — 배경이므로 놀이 공간을 어지럽히지 않게.
 const TREE_LAYOUT = [[24, 0], [44, 2], [180, 1], [330, 0], [349, 1], [362, 2], [540, 2], [700, 0], [716, 2],
   [860, 1], [872, 1], [1010, 0], [1150, 2], [1166, 0]];
-// 줄기 밑동 y. 지면 윗면(230)보다 4px 아래 → 밑동은 지면 타일 뒤로 숨고, 구덩이에서는 가까운 언덕 위에 서 보인다.
-const TREE_BASE = 234;
+// 줄기 밑동 y. 지면 윗면(230)보다 6px 아래 → 밑동은 지면 타일 뒤로 숨고, 구덩이에서는 가까운 언덕 위에 서 보인다.
+// 나무 키 26~40 → 지면 위로 20~34px 보인다(발판 높이 120~194보다 아래라 발판과 헷갈리지 않음).
+const TREE_BASE = 236;
 // 나무 줄 한 주기(P 폭)를 톤별 알파 마스크로 한 번 굽고, 색이 바뀐 프레임에만 skyAt 색으로 다시 합성한다.
 function bakeTreeRow() {
   const h = Math.max(...TREES.map((t) => t.length));

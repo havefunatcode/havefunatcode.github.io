@@ -158,7 +158,7 @@ function renderProps(sec) {
 
   heading(sec, `보물상자 32x28 ×${S} — 닫힘 / 열림1 / 열림2 / 열림+빛 · 닫힘+근접 반짝임`);
   const names = ["closed", "open1", "open2", "openGlow"];
-  const near = figure(`closed + near (1px 점멸${reducedPv ? " → reduced: 계속 켜짐" : ""})`, 32, S, () => {}, 28);
+  const near = figure("closed + near (1px 1Hz 점멸, reduced에서도)", 32, S, () => {}, 28);
   const nctx = near.querySelector("canvas").getContext("2d");
   ticks.push((t) => {
     nctx.clearRect(0, 0, 32, 28);

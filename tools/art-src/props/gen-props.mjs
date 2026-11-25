@@ -4,7 +4,7 @@
 //
 //   node tools/art-src/props/gen-props.mjs   → js/art/props.js의 COIN_FRAMES·CHEST_FRAMES·CLOUDS·TREES 문자열 출력
 //
-// 키: 코인 a 하이라이트 b 기본 c 테두리 / 상자 W 나무 w 나무그늘 M 금속 m 금속그늘 g 빛(코인 하이라이트색)
+// 키: 코인 a 하이라이트 b 기본 c 테두리 / 상자 W 나무 H 나무밝음 w 나무그늘 M 금속 m 금속그늘 g 빛(코인 하이라이트색)
 //     구름 c 구름 s 구름그늘 / 나무 t 줄기 L 잎 h 잎밝음 s 잎그늘 / . 투명
 
 const grid = (w, h) => Array.from({ length: h }, () => Array(w).fill("."));
@@ -40,6 +40,9 @@ function body(g) {
   rect(g, 29, 15, 2, 13, "w"); // 오른 그늘면 2칸
   rect(g, 1, 27, 30, 1, "w"); // 바닥
   rect(g, 2, 21, 27, 1, "w"); // 판자 이음
+  // 판자 위·왼 1px 나무 밝음(좌상단 광원). 금속 띠가 위에 덮는다.
+  rect(g, 2, 15, 27, 1, "H"); rect(g, 2, 16, 1, 5, "H");
+  rect(g, 2, 22, 27, 1, "H"); rect(g, 2, 23, 1, 4, "H");
   for (const sx of STRAPS) {
     rect(g, sx, 15, 2, 12, "M");
     rect(g, sx + 2, 15, 1, 12, "m");
@@ -54,6 +57,7 @@ function lid(g, dy, lock = true) {
   px(g, 2, 7 + dy, "w"); px(g, 29, 7 + dy, "w");
   rect(g, 1, 8 + dy, 1, 5, "w");
   rect(g, 29, 8 + dy, 2, 5, "w");
+  rect(g, 3, 7 + dy, 26, 1, "H"); rect(g, 2, 8 + dy, 1, 5, "H"); // 뚜껑 위·왼 밝음
   rect(g, 1, 13 + dy, 30, 1, "M");
   rect(g, 1, 14 + dy, 30, 1, "m");
   for (const sx of STRAPS) {
@@ -95,6 +99,7 @@ function chestOpen2() {
   px(g, 2, 4, "w"); px(g, 29, 4, "w");
   rect(g, 1, 5, 1, 3, "w");
   rect(g, 29, 5, 2, 3, "w");
+  rect(g, 3, 4, 26, 1, "H"); rect(g, 2, 5, 1, 3, "H");
   rect(g, 1, 8, 30, 1, "M");
   rect(g, 1, 9, 30, 1, "m");
   for (const sx of STRAPS) { rect(g, sx, 3, 3, 1, "m"); rect(g, sx, 4, 2, 4, "M"); rect(g, sx + 2, 4, 1, 4, "m"); }
@@ -118,6 +123,8 @@ function chestGlow() {
   rect(g, 1, 2, 1, 8, "w");
   rect(g, 29, 2, 2, 8, "w");
   rect(g, 2, 5, 27, 1, "w"); // 안쪽면 판자 이음
+  rect(g, 3, 1, 26, 1, "H"); rect(g, 2, 2, 1, 3, "H"); // 판자 위·왼 밝음
+  rect(g, 2, 6, 27, 1, "H"); rect(g, 2, 7, 1, 2, "H");
   for (const sx of STRAPS) { rect(g, sx, 0, 3, 1, "m"); rect(g, sx, 1, 2, 9, "M"); rect(g, sx + 2, 1, 1, 9, "m"); }
   rect(g, 1, 10, 30, 1, "m");
   // 안쪽: 보물 더미(금속색 코인) + 빛
@@ -171,12 +178,12 @@ const CLOUDS = CLOUD_BLOBS.map((b) => crop(cloud(b)));
 
 // ── 나무 3종: 잎 덩어리(원 합집합) + 줄기. 좌상단 테 2px = 잎밝음, 오른·아래 테 + 밑 2행 = 잎그늘 ──
 const TREE_DEFS = [
-  // 둥근 활엽수 18x26(시안 B 나무 크기)
-  { w: 18, h: 26, blobs: [[9, 6, 6], [5, 11, 5], [13, 11, 5], [9, 13, 5]], trunk: [8, 2], tufts: [[6, 4], [3, 9], [10, 9]] },
-  // 키 큰 포플러 12x32
-  { w: 12, h: 32, blobs: [[6, 6, 4], [6, 12, 5], [6, 19, 5], [6, 24, 4]], trunk: [5, 2], tufts: [[4, 4], [3, 11], [3, 18]] },
-  // 작은 나무 14x18
-  { w: 14, h: 18, blobs: [[7, 5, 4], [4, 8, 4], [10, 8, 4]], trunk: [6, 2], tufts: [[4, 4], [2, 7]] },
+  // 둥근 활엽수 ~24x36 (M2 게이트: 지면 위로 더 보이게 키움)
+  { w: 26, h: 38, blobs: [[13, 8, 8], [7, 15, 7], [19, 15, 7], [13, 19, 7]], trunk: [12, 3], tufts: [[9, 5], [4, 13], [14, 12], [10, 18]] },
+  // 키 큰 포플러 ~12x40
+  { w: 14, h: 42, blobs: [[7, 7, 5], [7, 14, 6], [7, 22, 6], [7, 29, 5]], trunk: [6, 2], tufts: [[5, 5], [3, 13], [4, 21]] },
+  // 작은 나무 ~18x26
+  { w: 20, h: 28, blobs: [[10, 7, 6], [5, 12, 5], [15, 12, 5], [10, 13, 5]], trunk: [9, 2], tufts: [[7, 4], [3, 10], [11, 9]] },
 ];
 function tree({ w, h, blobs, trunk, tufts }) {
   const g = grid(w, h);

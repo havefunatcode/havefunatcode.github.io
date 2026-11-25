@@ -84,7 +84,9 @@ for (const [i, t] of (TREES || []).entries()) {
 }
 const palIs = (pal, cols) => pal && Object.values(pal).every((c) => cols.includes(c));
 ok(palIs(PAL_COIN, [...B.coin3, null]), "PAL_COIN uses only spec coin colours");
-ok(palIs(PAL_CHEST, [...B.chest4, B.coin3[0], null]), "PAL_CHEST uses only spec chest colours (+ coin highlight for glow)");
+ok(palIs(PAL_CHEST, [...B.chest4, B.chestHi, B.coin3[0], null]), "PAL_CHEST uses only spec chest colours + chestHi (+ coin highlight for glow)");
+ok(B.chestHi === "#bb8a5e" && PAL_CHEST.H === B.chestHi, "chest wood highlight tone (M2 gate) = B.chestHi");
+ok((CHEST_FRAMES || []).every((f) => f.some((r) => r.includes("H"))), "every chest frame uses the wood highlight (no flat wood)");
 ok(palIs(PAL_CLOUD, [B.cloud, B.cloudSh, null]), "PAL_CLOUD uses only spec cloud colours");
 ok(palIs(PAL_TREE, [B.trunk, B.leaf, B.leafHi, B.leafSh, null]), "PAL_TREE uses only spec tree colours");
 ok(PAL_TREE && ["t", "L", "h", "s"].every((k) => k in PAL_TREE), "PAL_TREE keys t/L/h/s (time-of-day recolour map)");

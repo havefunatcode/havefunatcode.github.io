@@ -205,7 +205,8 @@ export class Game {
     // 진행도(0=시작/저녁 → 1=보물상자/오전): 카메라가 얼마나 전진했는지
     const denom = Math.max(1, this.level.worldWidth - this.viewW);
     const progress = clamp(cam.x / denom, 0, 1);
-    this.sprites.drawBackground(ctx, cam, this.t, this.viewW, progress);
+    // 배경 시간 = 그리기 시계 animT → 타이틀에서도 구름 표류·별 반짝임(reduced면 background.js가 정지)
+    this.sprites.drawBackground(ctx, cam, this.animT, this.viewW, progress);
 
     ctx.save();
     ctx.translate(-Math.round(cam.x), 0);

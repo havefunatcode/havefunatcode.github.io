@@ -117,12 +117,13 @@ export const Sprites = {
 
   // 상자 32x28을 히트박스 44x36 하단 중앙에(spec §5.5). 프레임 0 닫힘 / 1 열림1 / 2 열림2 / 3 열림+빛.
   // openT(열림 진행)는 Task 9 전까지 0 → 열림이면 바로 3(완전히 열림)을 그린다.
-  // 닫힘 + near(atChest): 자물쇠판 1px 반짝임이 1초에 0.25초 켜진다. reduced면 점멸 없이 계속 켜 둔다(근접 표시는 유지).
+  // 닫힘 + near(atChest): 자물쇠판 1px 반짝임이 1초에 0.25초 켜진다(1Hz). reduced-motion에서도 같은 점멸
+  // — 2026-11-25 M2 게이트 사용자 결정(spec §5.5 갱신, Global Constraint의 「상자 반짝임 정지」보다 우선).
   drawChest(ctx, c, { opened = false, near = false } = {}, animT = 0) {
     const f = opened ? 3 : 0;
     const dx = Math.round(c.x) + 6, dy = Math.round(c.y) + 8;
     ctx.drawImage(baked(`chest${f}`, CHEST_FRAMES[f], PAL_CHEST), dx, dy);
-    if (!opened && near && (this.reduced || animT % 1 < 0.25)) {
+    if (!opened && near && animT % 1 < 0.25) {
       ctx.fillStyle = PAL_CHEST.g;
       ctx.fillRect(dx + CHEST_GLINT.x, dy + CHEST_GLINT.y, 1, 1);
     }
