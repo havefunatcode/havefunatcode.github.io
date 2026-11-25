@@ -1,5 +1,5 @@
 // 애니메이션 순수 함수·그리기 시계 단위테스트. 실행: node tests/anim.test.mjs
-import { coinFrame } from "../js/anim.js";
+import { coinFrame, nextAnim, playerDrawRect, IDLE_STEP, WALK_FPS, LAND_MS, LAND_VY } from "../js/anim.js";
 import { Game } from "../js/engine.js";
 import { LEVEL } from "../js/level.js";
 
@@ -69,6 +69,78 @@ ok(coinFrame(0.3, true) === 0, "coinFrame reduced = 0");
   }
   ok(!glintAt(false, 0.1, { opened: false, near: false }) && !glintAt(false, 0.1, { opened: true, near: true }), "no glint when far or opened");
   delete globalThis.document;
+}
+
+// 플레이어 상태기계(spec §5.2)
+{
+  ok(IDLE_STEP === 0.5 && WALK_FPS === 10 && LAND_MS === 80 && LAND_VY === 200, "anim constants");
+  const R = { reduced: false }, RM = { reduced: true };
+  const gp = (vy = 0) => ({ grounded: true, vy }), air = (vy) => ({ grounded: false, vy });
+  const none = { touchdown: false, impactVy: 0 }, still = { moveX: 0, jump: false }, right = { moveX: 1, jump: false };
+  // idle: 0.5초마다 frame 0<->1
+  let a = nextAnim(null, gp(), none, still, 0.016, R);
+  ok(a.state === "idle" && a.frame === 0, "null prev grounded still -> idle 0");
+  let frames = [];
+  for (let i = 0; i < 70; i++) { a = nextAnim(a, gp(), none, still, 0.016, R); frames.push(a.frame); }
+  ok(a.state === "idle" && frames.includes(1) && frames.includes(0), "idle toggles 0/1");
+  a = { state: "idle", frame: 0, timer: 0 };
+  a = nextAnim(a, gp(), none, still, 0.49, R); ok(a.frame === 0, "idle 0.49s -> frame 0");
+  a = nextAnim(a, gp(), none, still, 0.02, R); ok(a.frame === 1, "idle 0.51s -> frame 1");
+  a = nextAnim(a, gp(), none, still, 0.5, R); ok(a.frame === 0, "idle 1.01s -> frame 0");
+  // reduced: idle 고정 0
+  a = { state: "idle", frame: 0, timer: 0 };
+  a = nextAnim(a, gp(), none, still, 0.6, RM); ok(a.state === "idle" && a.frame === 0, "reduced idle frame fixed 0");
+  // walk: 10fps 6프레임
+  a = nextAnim({ state: "idle", frame: 1, timer: 0.3 }, gp(), none, right, 0.016, R);
+  ok(a.state === "walk" && a.frame === 0 && a.timer === 0, "idle->walk resets timer/frame");
+  const seen = [];
+  for (let i = 0; i < 40; i++) { a = nextAnim(a, gp(), none, right, 0.05, R); seen.push(a.frame); }
+  ok(new Set(seen).size === 6 && seen.every((f) => f >= 0 && f <= 5), `walk covers 0..5: ${[...new Set(seen)]}`);
+  a = { state: "walk", frame: 0, timer: 0 };
+  a = nextAnim(a, gp(), none, right, 0.1, R); ok(a.frame === 1, "walk 0.1s -> frame 1");
+  a = nextAnim(a, gp(), none, right, 0.5, R); ok(a.frame === 0, "walk 0.6s -> frame 0 (loop)");
+  const b = nextAnim({ state: "walk", frame: 3, timer: 0.35 }, gp(), none, right, 0.1, RM);
+  const c = nextAnim({ state: "walk", frame: 3, timer: 0.35 }, gp(), none, right, 0.1, R);
+  ok(b.state === c.state && b.frame === c.frame && b.timer === c.timer, "walk identical under reduced");
+  a = nextAnim({ state: "walk", frame: 3, timer: 0.35 }, gp(), none, still, 0.016, R);
+  ok(a.state === "idle" && a.frame === 0 && a.timer === 0, "walk stops -> idle (reset)");
+  // 공중
+  a = nextAnim({ state: "idle", frame: 0, timer: 0 }, air(-100), none, still, 0.016, R); ok(a.state === "jumpUp" && a.frame === 0, "vy<0 -> jumpUp");
+  a = nextAnim(a, air(0), none, still, 0.016, R); ok(a.state === "fall" && a.frame === 0, "vy=0 airborne -> fall");
+  a = nextAnim(a, air(300), none, right, 0.016, R); ok(a.state === "fall", "vy>0 -> fall");
+  // land
+  const td = { touchdown: true, impactVy: 250 };
+  a = nextAnim({ state: "fall", frame: 0, timer: 0.2 }, gp(), td, still, 0.016, R);
+  ok(a.state === "land" && a.frame === 0 && a.timer === 0, "touchdown impactVy>=200 -> land");
+  let steps = 0;
+  while (a.state === "land" && steps < 20) { a = nextAnim(a, gp(), none, still, 0.016, R); steps++; }
+  ok(a.state === "idle" && steps === 5, `land lasts 80ms then idle (steps=${steps})`);
+  a = nextAnim({ state: "fall", frame: 0, timer: 0 }, gp(), { touchdown: true, impactVy: LAND_VY }, right, 0.016, R);
+  ok(a.state === "land", "impactVy === 200 -> land");
+  for (let i = 0; i < 5; i++) a = nextAnim(a, gp(), none, right, 0.016, R);
+  ok(a.state === "walk", "land ends -> walk when moving");
+  a = nextAnim({ state: "land", frame: 0, timer: 0.02 }, gp(), none, right, 0.016, RM);
+  ok(a.state === "land", "land kept under reduced");
+  a = nextAnim({ state: "fall", frame: 0, timer: 0 }, gp(), { touchdown: true, impactVy: 199 }, still, 0.016, R);
+  ok(a.state === "idle", "impactVy<200 -> no land (idle)");
+  a = nextAnim({ state: "fall", frame: 0, timer: 0 }, gp(), { touchdown: true, impactVy: 100 }, right, 0.016, R);
+  ok(a.state === "walk", "soft touchdown + moving -> walk");
+  a = nextAnim({ state: "land", frame: 0, timer: 0.02 }, air(-300), none, still, 0.016, R);
+  ok(a.state === "jumpUp", "jump during land -> jumpUp");
+}
+
+// 그리기 앵커: facing과 무관하게 같은 16px 열 범위(spec §5.2)
+{
+  const p = { x: 100.3, y: 50, w: 12, h: 20 };
+  const r = playerDrawRect(p);
+  ok(r.x === 98 && r.y === 46 && r.flipX === 114, `playerDrawRect ${JSON.stringify(r)}`);
+  const cols = (facing) => {
+    const q = { ...p, facing };
+    const d = playerDrawRect(q);
+    return facing > 0 ? [d.x, d.x + 16] : [d.flipX - 16, d.flipX];
+  };
+  const R = cols(1), L = cols(-1);
+  ok(R[0] === 98 && R[1] === 114 && L[0] === 98 && L[1] === 114, `draw rect identical for both facings: ${R} vs ${L}`);
 }
 
 console.log(`\n${fail === 0 ? "✅" : "❌"} anim tests: ${pass} passed, ${fail} failed`);
