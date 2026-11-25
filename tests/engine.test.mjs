@@ -97,5 +97,35 @@ ok(!intersect({ x: 0, y: 0, w: 10, h: 10 }, { x: 20, y: 0, w: 10, h: 10 }), "떨
   ok(Math.abs(p.x - safe.x) < 0.5 && Math.abs(p.y - safe.y) < 0.5, "직전 안전 위치로 리스폰");
 }
 
+// 7) touchdown: 착지 스텝에서만 1회 true, impactVy>0. landed는 서 있는 동안 계속 true
+{
+  const p = makePlayer(flat);
+  ok(p.h === 20, "히트박스 높이 20");
+  p.y = 100;
+  let touchdowns = 0;
+  let impact = 0;
+  let standingTouch = 0;
+  let standingLanded = 0;
+  let landedYet = false;
+  for (let i = 0; i < 200; i++) {
+    const ev = stepPlayer(p, { moveX: 0, jump: false }, flat, 1 / 60);
+    if (ev.touchdown) {
+      touchdowns++;
+      impact = ev.impactVy;
+    } else {
+      ok(ev.impactVy === 0, "touchdown 아니면 impactVy 0");
+    }
+    if (landedYet) {
+      if (ev.touchdown) standingTouch++;
+      if (ev.landed) standingLanded++;
+    }
+    if (ev.touchdown) landedYet = true;
+  }
+  ok(touchdowns === 1, `touchdown은 착지 스텝 1회 (${touchdowns})`);
+  ok(impact > 0, `touchdown 스텝 impactVy>0 (${impact.toFixed(1)})`);
+  ok(standingTouch === 0, "서 있는 동안 touchdown false");
+  ok(standingLanded > 60, `서 있는 동안 landed 계속 true (${standingLanded})`);
+}
+
 console.log(`\n${fail === 0 ? "✅" : "❌"} engine tests: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

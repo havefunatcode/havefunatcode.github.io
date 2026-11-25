@@ -32,8 +32,9 @@ export function intersect(a, b) {
 // 순수 물리 1스텝. player를 직접 갱신하고 이벤트를 반환한다.
 // intent: { moveX: -1|0|1, jump: boolean(엣지) }
 export function stepPlayer(player, intent, level, dt) {
-  const ev = { jumped: false, landed: false, fell: false };
+  const ev = { jumped: false, landed: false, fell: false, touchdown: false, impactVy: 0 };
   const p = player;
+  const wasGrounded = p.grounded; // 점프 처리 전 착지 여부(touchdown 판정용)
 
   // 수평 속도
   p.vx = intent.moveX * PHYS.MOVE_SPEED;
@@ -69,6 +70,10 @@ export function stepPlayer(player, intent, level, dt) {
         p.y = s.y - p.h;
         p.grounded = true;
         ev.landed = true;
+        if (!wasGrounded) {
+          ev.touchdown = true;
+          ev.impactVy = p.vy; // vy = 0 이전의 착지 속도
+        }
       } else if (p.vy < 0) {
         p.y = s.y + s.h;
       }
@@ -104,7 +109,7 @@ export function makePlayer(level) {
     x: level.start.x,
     y: level.start.y,
     w: 12,
-    h: 16,
+    h: 20,
     vx: 0,
     vy: 0,
     grounded: false,
