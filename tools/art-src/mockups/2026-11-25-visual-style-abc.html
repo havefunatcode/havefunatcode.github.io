@@ -1,0 +1,225 @@
+<h2>어떤 픽셀 화풍이 「진짜 픽셀 게임」에 가까운가?</h2>
+<p class="subtitle">같은 장면(사이트 내부 해상도 480x270)을 세 화풍으로 그렸다. 캐릭터(16x24)는 프로필 사진 반영 1차: 검은 옆가르마 머리·동그란 안경·차콜 후드티. 장면 아래 8배 확대본도 붙였다. 하늘색은 진행도 중간(새벽→오전) 기준. 마음에 드는 것을 클릭하고, 섞고 싶은 점은 터미널에 적어 달라.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image"><canvas id="cvA" width="480" height="270" style="width:100%;image-rendering:pixelated;display:block"></canvas></div>
+    <div class="card-body">
+      <h3>A. 16비트 아케이드</h3>
+      <p>채도 높은 색, 검은 외곽선, 또렷한 타일. 슈퍼패미컴·고전 플랫포머 느낌.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image"><canvas id="cvB" width="480" height="270" style="width:100%;image-rendering:pixelated;display:block"></canvas></div>
+    <div class="card-body">
+      <h3>B. 아늑한 인디</h3>
+      <p>차분한 색, 검은선 대신 같은 계열 진한 색 외곽선, 부드러운 하늘 디더. Stardew·Celeste 계열 느낌.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image"><canvas id="cvC" width="480" height="270" style="width:100%;image-rendering:pixelated;display:block"></canvas></div>
+    <div class="card-body">
+      <h3>C. 제한 팔레트 레트로</h3>
+      <p>PICO-8 고정 16색만 사용. 단순한 형태, 강한 대비. 판타지 콘솔 느낌.</p>
+    </div>
+  </div>
+</div>
+
+<h3>캐릭터 8배 확대 (A · B · C 순)</h3>
+<div style="display:flex;gap:16px;flex-wrap:wrap">
+  <canvas id="cvAbig" width="144" height="200" style="image-rendering:pixelated"></canvas>
+  <canvas id="cvBbig" width="144" height="200" style="image-rendering:pixelated"></canvas>
+  <canvas id="cvCbig" width="144" height="200" style="image-rendering:pixelated"></canvas>
+</div>
+<p class="subtitle">16x24 안에 담기는 건 머리 모양·안경·후드티 정도다. 표정·볼 같은 디테일은 대화 모달이나 타이틀 화면용 큰 초상(예: 48x48)으로 따로 두는 방법이 있다.</p>
+
+<script>
+(function () {
+  const W = 480, H = 270;
+  const STYLES = {
+    a: {
+      sky: ["#3a6fd0", "#4f8ee6", "#73b0f5", "#a4d4ff", "#cdeaff"], dither: true,
+      sun: "#fff3a0", sunEdge: "#ffd14a", cloud: "#ffffff", cloudSh: "#c4dcf5",
+      mtn: "#7f8fc8", mtnSh: "#5f6ea8", far: "#58b08c", farSh: "#3f8f70", near: "#3f9a55", nearSh: "#2c7a3e",
+      trunk: "#7a4a22", leaf: "#2f9a45", leafHi: "#5fd35f", leafSh: "#1f6e33",
+      grass: "#5fd35f", grassSh: "#2e9e3e", dirt: "#a0603a", dirtSh: "#7a4428", dirtHi: "#c47c4c",
+      plat: "#c8743c", platHi: "#e8a060", platSh: "#8a4a22",
+      outline: "#1a1426", hair: "#2a2030", skin: "#f4c8a0", shirt: "#3f7fd8", shirtSh: "#2c5aa0", pants: "#33405a", shoe: "#1a1426",
+      coin: ["#fff6b0", "#ffd54a", "#d98e1f"], chest: ["#8a4a22", "#5e3214", "#ffd24a", "#c89020"],
+    },
+    b: {
+      sky: ["#9fb8d8", "#b9c9dc", "#d8d6d8", "#efd8c8", "#f6e2cc"], dither: true,
+      sun: "#fff1d0", sunEdge: "#f8d8a8", cloud: "#fbf3ea", cloudSh: "#e2d6d0",
+      mtn: "#a9a6c4", mtnSh: "#8e8aae", far: "#a8c3b0", farSh: "#8daa98", near: "#7fa68c", nearSh: "#668d74",
+      trunk: "#8a6448", leaf: "#6f9a6a", leafHi: "#94bd84", leafSh: "#557a56",
+      grass: "#8fbf6a", grassSh: "#6c9a4f", dirt: "#9c7458", dirtSh: "#7d5a44", dirtHi: "#b48a6a",
+      plat: "#b08458", platHi: "#caa074", platSh: "#7e5a3c",
+      outline: null, hair: "#3a2e30", skin: "#f1c9a8", shirt: "#6a8fc0", shirtSh: "#4f6f9c", pants: "#4c5068", shoe: "#3a3040",
+      coin: ["#fff2c0", "#f0c860", "#c8963a"], chest: ["#9c6a44", "#6e4a30", "#f0c860", "#c8963a"],
+    },
+    c: {
+      sky: ["#1D2B53", "#29ADFF", "#29ADFF", "#83769C", "#FFCCAA"], dither: true,
+      sun: "#FFEC27", sunEdge: "#FFA300", cloud: "#FFF1E8", cloudSh: "#C2C3C7",
+      mtn: "#83769C", mtnSh: "#5F574F", far: "#008751", farSh: "#1D2B53", near: "#00E436", nearSh: "#008751",
+      trunk: "#AB5236", leaf: "#008751", leafHi: "#00E436", leafSh: "#1D2B53",
+      grass: "#00E436", grassSh: "#008751", dirt: "#AB5236", dirtSh: "#5F574F", dirtHi: "#FFA300",
+      plat: "#AB5236", platHi: "#FFA300", platSh: "#5F574F",
+      outline: "#000000", hair: "#000000", skin: "#FFCCAA", shirt: "#29ADFF", shirtSh: "#1D2B53", pants: "#5F574F", shoe: "#000000",
+      coin: ["#FFF1E8", "#FFEC27", "#FFA300"], chest: ["#AB5236", "#5F574F", "#FFEC27", "#FFA300"],
+    },
+  };
+
+  function draw(id, s) {
+    const cv = document.getElementById(id);
+    const c = cv.getContext("2d");
+    const R = (x, y, w, h, col) => { if (!col) return; c.fillStyle = col; c.fillRect(x | 0, y | 0, w | 0, h | 0); };
+    const P = (x, y, col) => R(x, y, 1, 1, col);
+
+    // 하늘: 단계 밴드 + 경계 디더
+    const bands = s.sky.length, bh = 200 / bands;
+    for (let i = 0; i < bands; i++) {
+      R(0, i * bh, W, bh + 1, s.sky[i]);
+      if (s.dither && i < bands - 1) {
+        for (let y = 0; y < 4; y++) for (let x = (y % 2); x < W; x += 2)
+          if (y < 2 || x % 4 === 0) P(x, (i + 1) * bh - 2 + y, s.sky[i + 1]);
+      }
+    }
+    // 해
+    const sx = 360, sy = 58, sr = 16;
+    for (let y = -sr; y <= sr; y++) for (let x = -sr; x <= sr; x++) {
+      const d = x * x + y * y;
+      if (d <= sr * sr) P(sx + x, sy + y, d > (sr - 3) * (sr - 3) ? s.sunEdge : s.sun);
+    }
+    // 구름
+    function cloud(x, y, k) {
+      const blobs = [[0, 6, 10], [9, 2, 12], [22, 5, 10], [31, 8, 7]];
+      for (const [bx, by, r] of blobs) {
+        const rr = r * k;
+        for (let yy = -rr; yy <= rr; yy++) for (let xx = -rr; xx <= rr; xx++)
+          if (xx * xx + yy * yy <= rr * rr) P(x + bx * k + xx, y + by * k + yy, yy > rr * 0.4 ? s.cloudSh : s.cloud);
+      }
+    }
+    cloud(60, 34, 1); cloud(210, 52, 0.8); cloud(410, 98, 0.7);
+    // 산(먼 레이어)
+    for (let x = 0; x < W; x++) {
+      const h = 120 + Math.abs(((x * 0.9) % 140) - 70) * 0.9 + Math.sin(x * 0.05) * 6;
+      R(x, h, 1, 200 - h, x % 140 < 70 ? s.mtn : s.mtnSh);
+      if (s.outline) P(x, h, s.outline);
+    }
+    // 언덕 2단
+    function hills(base, amp, freq, ph, col, sh) {
+      for (let x = 0; x < W; x++) {
+        const h = Math.round(base - amp * (0.5 + 0.5 * Math.sin(x * freq + ph)) - 4 * Math.sin(x * freq * 3.1 + ph));
+        R(x, h, 1, 216 - h, col);
+        R(x, h + 3, 1, 2, sh);
+        if (s.outline) P(x, h, s.outline);
+      }
+    }
+    hills(178, 26, 0.022, 1.2, s.far, s.farSh);
+    hills(198, 20, 0.035, 0.3, s.near, s.nearSh);
+    // 나무
+    function tree(x, y) {
+      R(x + 7, y + 14, 3, 12, s.trunk);
+      const L = [[4, 0, 9, 4], [2, 3, 13, 5], [0, 7, 17, 6], [2, 12, 13, 3]];
+      for (const [lx, ly, lw, lh] of L) R(x + lx, y + ly, lw, lh, s.leaf);
+      R(x + 5, y + 2, 4, 3, s.leafHi); R(x + 3, y + 7, 4, 2, s.leafHi);
+      R(x + 2, y + 13, 13, 2, s.leafSh);
+      if (s.outline) { R(x + 4, y - 1, 9, 1, s.outline); R(x - 1, y + 7, 1, 6, s.outline); R(x + 17, y + 7, 1, 6, s.outline); }
+    }
+    tree(40, 186); tree(150, 190); tree(330, 188);
+    // 지면 타일 (16x16)
+    const gy = 216;
+    for (let tx = 0; tx < W; tx += 16) {
+      if (tx >= 224 && tx < 272) { R(tx, gy, 16, H - gy, s.nearSh); R(tx, gy + 20, 16, H - gy, s.outline || s.dirtSh); continue; } // 구덩이
+      R(tx, gy, 16, H - gy, s.dirt);
+      R(tx, gy, 16, 5, s.grass); R(tx, gy + 5, 16, 2, s.grassSh);
+      for (let k = 0; k < 16; k += 4) P(tx + k + 1, gy + 5 + (k % 8 ? 2 : 0), s.grass);
+      P(tx + 3, gy + 13, s.dirtSh); P(tx + 4, gy + 13, s.dirtSh); P(tx + 11, gy + 21, s.dirtSh); P(tx + 9, gy + 30, s.dirtHi); P(tx + 13, gy + 40, s.dirtSh);
+      R(tx + 15, gy + 7, 1, H - gy, s.dirtSh);
+      if (s.outline) R(tx, gy - 1, 16, 1, s.outline);
+    }
+    // 발판
+    function plat(x, y, n) {
+      for (let i = 0; i < n; i++) {
+        const px = x + i * 16;
+        R(px, y, 16, 8, s.plat); R(px, y, 16, 2, s.platHi); R(px, y + 6, 16, 2, s.platSh); R(px + 15, y, 1, 8, s.platSh);
+        P(px + 4, y + 4, s.platSh); P(px + 10, y + 3, s.platSh);
+      }
+      if (s.outline) { R(x, y - 1, n * 16, 1, s.outline); R(x, y + 8, n * 16, 1, s.outline); }
+    }
+    plat(232, 168, 3); plat(330, 140, 2);
+    // 코인
+    function coin(x, y) {
+      const m = ["..ccc...", ".cbbbc..", "cbaabbc.", "cbabbbc.", "cbbbabc.", "cbbbbbc.", ".cbbbc..", "..ccc..."];
+      for (let yy = 0; yy < 8; yy++) for (let xx = 0; xx < 8; xx++) {
+        const k = m[yy][xx]; if (k === ".") continue;
+        P(x + xx, y + yy, k === "a" ? s.coin[0] : k === "b" ? s.coin[1] : s.outline || s.coin[2]);
+      }
+    }
+    coin(244, 152); coin(262, 150); coin(342, 124);
+    // 상자
+    const cx = 420, cy = 200;
+    R(cx, cy + 6, 18, 10, s.chest[0]); R(cx, cy, 18, 7, s.chest[0]); R(cx, cy + 6, 18, 2, s.chest[3]);
+    R(cx, cy + 14, 18, 2, s.chest[1]); R(cx + 7, cy + 4, 4, 6, s.chest[2]); P(cx + 8, cy + 7, s.chest[1]);
+    if (s.outline) { R(cx - 1, cy - 1, 20, 1, s.outline); R(cx - 1, cy, 1, 16, s.outline); R(cx + 18, cy, 1, 16, s.outline); }
+    // 캐릭터 (16x24 자리표시)
+    const pal = {
+      o: s.outline || s.ol2, h: s.hair, H: s.hairHi, s: s.skin, S: s.skinSh, g: s.glass, e: "#16161a", m: s.mouth,
+      d: s.hood, b: s.hoodie, B: s.hoodieSh, c: s.cord, p: s.pants, f: s.shoe,
+    };
+    function person(ox, oy, z) {
+      for (let yy = 0; yy < 24; yy++) for (let xx = 0; xx < 16; xx++) {
+        const k = (PM[yy] || "")[xx] || ".";
+        const col = pal[k];
+        if (k !== "." && col) R(ox + xx * z, oy + yy * z, z, z, col);
+      }
+    }
+    person(120, gy - 24, 1);
+    const big = document.getElementById(id + "big");
+    if (big) {
+      const bc = big.getContext("2d");
+      bc.fillStyle = "#30c4b0"; bc.fillRect(0, 0, big.width, big.height);
+      const save = c; // 확대본은 별도 캔버스
+      for (let yy = 0; yy < 24; yy++) for (let xx = 0; xx < 16; xx++) {
+        const k = (PM[yy] || "")[xx] || ".";
+        const col = pal[k];
+        if (k !== "." && col) { bc.fillStyle = col; bc.fillRect(8 + xx * 8, 4 + yy * 8, 8, 8); }
+      }
+    }
+  }
+  // 프로필 사진 기반 16x24: 옆가르마(오른쪽 볼륨) 검은 머리, 동그란 안경, 차콜 후드티(끈 2줄)
+  const PM = [
+    "....ooooooo.....",
+    "...ohhhhhhhoo...",
+    "..ohhhHhhhhhho..",
+    "..ohhhhhhhhhhho.",
+    "..ohsshhhhhhhho.",
+    ".oohssssssshhso.",
+    ".osgggsgsgggsso.",
+    ".osgesssssgesso.",
+    ".ossgsssssgsso..",
+    "..osssssssssSo..",
+    "..ossssmmsssSo..",
+    "...osssssssSo...",
+    "...odsSSSSsdo...",
+    "..oddbbssbbddo..",
+    ".odbbbbsbbbbbdo.",
+    ".obbbbcbbcbbbbo.",
+    ".osbbbcbbcbbbso.",
+    ".oBbbbbbbbbbbBo.",
+    "..oBbbbbbbbbBo..",
+    "...oppppppppo...",
+    "...oppo..oppo...",
+    "...oppo..oppo...",
+    "..offfo..offfo..",
+    "..ooooo..ooooo..",
+  ];
+  const CH = {
+    a: { ol2: "#1a1426", hair: "#1c1c22", hairHi: "#3a3a48", skin: "#f2bf98", skinSh: "#d9967a", glass: "#4a4a52", mouth: "#a8604e", hood: "#2a302f", hoodie: "#434b49", hoodieSh: "#30363a", cord: "#9aa2a0", pants: "#2f3a5a", shoe: "#1a1426" },
+    b: { ol2: "#2a2428", hair: "#26232a", hairHi: "#3e3a44", skin: "#f0c4a2", skinSh: "#d8a084", glass: "#56525a", mouth: "#b07060", hood: "#383e3e", hoodie: "#4e5654", hoodieSh: "#3c4444", cord: "#a6aaa6", pants: "#454a62", shoe: "#2e2a32" },
+    c: { ol2: "#000000", hair: "#000000", hairHi: "#5F574F", skin: "#FFCCAA", skinSh: "#AB5236", glass: "#5F574F", mouth: "#7E2553", hood: "#000000", hoodie: "#5F574F", hoodieSh: "#1D2B53", cord: "#C2C3C7", pants: "#1D2B53", shoe: "#000000" },
+  };
+  Object.assign(STYLES.a, CH.a); Object.assign(STYLES.b, CH.b); Object.assign(STYLES.c, CH.c);
+  draw("cvA", STYLES.a); draw("cvB", STYLES.b); draw("cvC", STYLES.c);
+})();
+</script>
