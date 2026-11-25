@@ -1,0 +1,470 @@
+{
+  "format": "pixelforge-poses",
+  "version": 1,
+  "name": "player",
+  "width": 16,
+  "height": 30,
+  "palette": {
+    "o": "#2a2428",
+    "h": "#26232a",
+    "H": "#3e3a44",
+    "s": "#f0c4a2",
+    "S": "#d8a084",
+    "g": "#56525a",
+    "m": "#b07060",
+    "c": "#383e3e",
+    "d": "#4e5654",
+    "D": "#3c4444",
+    "l": "#a6aaa6",
+    "p": "#454a62",
+    "f": "#2e2a32"
+  },
+  "ramps": [
+    [
+      "h",
+      "H"
+    ],
+    [
+      "S",
+      "s"
+    ],
+    [
+      "D",
+      "d"
+    ],
+    [
+      "o",
+      "p"
+    ]
+  ],
+  "light": 225,
+  "parts": {
+    "hips": {
+      "mass": {
+        "size": [
+          6,
+          2
+        ],
+        "ramp": 3,
+        "base": 1,
+        "outline": "o"
+      },
+      "points": {
+        "hip": [
+          0,
+          0
+        ],
+        "waist": [
+          0,
+          -1
+        ]
+      }
+    },
+    "torso": {
+      "rows": [
+        "occccSSScco",
+        "oddcccSccdo",
+        "oddddldlDDo",
+        "oddddldlDDo",
+        "odddddddDDo",
+        ".oDDDDDDDo."
+      ],
+      "anchor": [
+        5,
+        5
+      ],
+      "points": {
+        "neck": [
+          5,
+          -1
+        ],
+        "nearShoulder": [
+          3,
+          2
+        ],
+        "farShoulder": [
+          7,
+          2
+        ]
+      }
+    },
+    "head": {
+      "rows": [
+        "......ooooo...",
+        "...ooohHHHhoo.",
+        "..ohhHHHhhhhho",
+        ".ohHHhhhhhhhho",
+        ".ohhhhhhhhhhho",
+        ".ohhhhsshhhhho",
+        ".ohhhsssssshho",
+        ".ohSssggsgsgso",
+        ".ohSggsogsgogo",
+        "..oSssggsssgso",
+        "...Ssssssssso.",
+        "...Sssssmmsso.",
+        "....SSssssoo.."
+      ],
+      "anchor": [
+        6,
+        12
+      ]
+    },
+    "thigh": {
+      "bone": {
+        "length": 3,
+        "width": [
+          2,
+          2
+        ],
+        "ramp": 3,
+        "base": 1,
+        "outline": "o",
+        "caps": [
+          "round",
+          "flat"
+        ]
+      },
+      "points": {
+        "end": "end"
+      }
+    },
+    "shin": {
+      "bone": {
+        "length": 1,
+        "width": [
+          2,
+          2
+        ],
+        "ramp": 3,
+        "base": 1,
+        "outline": "o",
+        "caps": [
+          "socket",
+          "flat"
+        ]
+      },
+      "points": {
+        "end": "end"
+      }
+    },
+    "upper": {
+      "bone": {
+        "length": 2,
+        "width": [
+          1,
+          1
+        ],
+        "ramp": 2,
+        "base": 1,
+        "outline": "o",
+        "caps": [
+          "round",
+          "round"
+        ]
+      },
+      "points": {
+        "end": "end"
+      }
+    },
+    "fore": {
+      "bone": {
+        "length": 1,
+        "width": [
+          1,
+          1
+        ],
+        "ramp": 2,
+        "base": 1,
+        "outline": "o",
+        "caps": [
+          "socket",
+          "round"
+        ]
+      },
+      "points": {
+        "end": "end"
+      }
+    },
+    "farUpper": {
+      "bone": {
+        "length": 2,
+        "width": [
+          1,
+          1
+        ],
+        "ramp": 2,
+        "base": 0,
+        "outline": "o",
+        "caps": [
+          "round",
+          "round"
+        ]
+      },
+      "points": {
+        "end": "end"
+      }
+    },
+    "farFore": {
+      "bone": {
+        "length": 1,
+        "width": [
+          1,
+          1
+        ],
+        "ramp": 2,
+        "base": 0,
+        "outline": "o",
+        "caps": [
+          "socket",
+          "round"
+        ]
+      },
+      "points": {
+        "end": "end"
+      }
+    },
+    "hand": {
+      "rows": [
+        "ss",
+        "SS"
+      ],
+      "anchor": [
+        0,
+        0
+      ]
+    },
+    "farHand": {
+      "rows": [
+        "SS"
+      ],
+      "anchor": [
+        0,
+        0
+      ]
+    },
+    "boot": {
+      "rows": [
+        "offf.",
+        "ffffo"
+      ],
+      "anchor": [
+        1,
+        0
+      ]
+    },
+    "farBoot": {
+      "rows": [
+        "offf.",
+        "fffff"
+      ],
+      "anchor": [
+        1,
+        0
+      ]
+    }
+  },
+  "poses": [
+    {
+      "name": "stand",
+      "duration": 500,
+      "origin": [
+        8,
+        26
+      ],
+      "parts": [
+        {
+          "name": "farUpper",
+          "part": "farUpper",
+          "attach": {
+            "part": "torso",
+            "point": "farShoulder"
+          },
+          "angle": 90
+        },
+        {
+          "name": "farFore",
+          "part": "farFore",
+          "attach": {
+            "part": "farUpper",
+            "point": "end"
+          },
+          "angle": 0
+        },
+        {
+          "name": "farHand",
+          "part": "farHand",
+          "attach": {
+            "part": "farFore",
+            "point": "end"
+          }
+        },
+        {
+          "name": "farThigh",
+          "part": "thigh",
+          "attach": {
+            "part": "hips",
+            "point": "hip"
+          },
+          "at": [
+            1,
+            0
+          ],
+          "angle": 90
+        },
+        {
+          "name": "farShin",
+          "part": "shin",
+          "attach": {
+            "part": "farThigh",
+            "point": "end"
+          },
+          "angle": 0
+        },
+        {
+          "name": "farBoot",
+          "part": "farBoot",
+          "attach": {
+            "part": "farShin",
+            "point": "end"
+          }
+        },
+        {
+          "name": "hips",
+          "part": "hips",
+          "at": [
+            0,
+            -5
+          ]
+        },
+        {
+          "name": "nearThigh",
+          "part": "thigh",
+          "attach": {
+            "part": "hips",
+            "point": "hip"
+          },
+          "at": [
+            -2,
+            0
+          ],
+          "angle": 90
+        },
+        {
+          "name": "nearShin",
+          "part": "shin",
+          "attach": {
+            "part": "nearThigh",
+            "point": "end"
+          },
+          "angle": 0
+        },
+        {
+          "name": "nearBoot",
+          "part": "boot",
+          "attach": {
+            "part": "nearShin",
+            "point": "end"
+          }
+        },
+        {
+          "name": "torso",
+          "part": "torso",
+          "attach": {
+            "part": "hips",
+            "point": "hip"
+          }
+        },
+        {
+          "name": "head",
+          "part": "head",
+          "attach": {
+            "part": "torso",
+            "point": "neck"
+          }
+        },
+        {
+          "name": "nearUpper",
+          "part": "upper",
+          "attach": {
+            "part": "torso",
+            "point": "nearShoulder"
+          },
+          "angle": 90
+        },
+        {
+          "name": "nearFore",
+          "part": "fore",
+          "attach": {
+            "part": "nearUpper",
+            "point": "end"
+          },
+          "angle": 0
+        },
+        {
+          "name": "nearHand",
+          "part": "hand",
+          "attach": {
+            "part": "nearFore",
+            "point": "end"
+          }
+        }
+      ]
+    }
+  ],
+  "rig": {
+    "body": "hips",
+    "head": "head",
+    "ground": 26,
+    "rest": "stand",
+    "legs": [
+      [
+        "nearThigh",
+        "nearShin"
+      ],
+      [
+        "farThigh",
+        "farShin"
+      ]
+    ],
+    "arms": [
+      [
+        "nearUpper",
+        "nearFore"
+      ],
+      [
+        "farUpper",
+        "farFore"
+      ]
+    ]
+  },
+  "motions": {
+    "idle": {
+      "template": "idle",
+      "frames": 2,
+      "duration": 500,
+      "breath": 0
+    },
+    "walk": {
+      "template": "walk",
+      "frames": 6,
+      "speed": 30,
+      "stride": 5,
+      "lift": 1,
+      "bob": 1
+    },
+    "jump": {
+      "template": "jump",
+      "apex": 1
+    }
+  },
+  "sheet": {
+    "columns": 8
+  },
+  "animations": {
+    "stand": {
+      "frames": [
+        "stand"
+      ]
+    }
+  }
+}

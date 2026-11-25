@@ -19,6 +19,14 @@
   canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
   h2 { font-size: 14px; color: var(--dim); font-weight: 600; margin: 0 0 8px; }
   .hint { color: var(--dim); font-size: 12px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  .cols > div { min-width: 0; border-left: 2px solid var(--line); padding-left: 12px; }
+  .cols h3 { margin: 0 0 8px; font-size: 15px; }
+  .cell canvas { border: 1px solid var(--line); background: #8fa3b8; }
+  .cell { text-align: center; }
+  .ctl { display: flex; gap: 8px; margin: 0 0 14px; flex-wrap: wrap; align-items: center; }
+  .ctl button { background: #2b2d40; color: var(--fg); border: 1px solid var(--line); padding: 3px 10px; font: inherit; cursor: pointer; }
+  .ctl button.on { background: var(--fg); color: var(--bg); }
 </style>
 </head>
 <body>
@@ -38,7 +46,10 @@ import { baked } from "../../../js/art/bake.js";
 import { PAL_TILE, GROUND, PLAT } from "../../../js/art/tiles.js";
 import { COIN_FRAMES, PAL_COIN, CHEST_FRAMES, PAL_CHEST, CHEST_GLINT, CLOUDS, PAL_CLOUD, TREES, TREE_TONES } from "../../../js/art/props.js";
 import { skyAt } from "../../../js/art/palette.js";
-import { coinFrame } from "../../../js/anim.js";
+import { coinFrame, playerDrawRect, IDLE_STEP, WALK_FPS, WALK_FRAME_COUNT, LAND_MS } from "../../../js/anim.js";
+import { PAL_PLAYER as PAL_CODIXEL, PLAYER_FRAMES as FR_CODIXEL } from "../player/codixel/frames.mjs";
+import { PAL_PLAYER as PAL_PIXELBOLT, PLAYER_FRAMES as FR_PIXELBOLT } from "../player/pixelbolt/frames.mjs";
+import { GLASSES_VARIANTS, GLASSES_PICK } from "../player/pixelbolt/glasses-variants.mjs";
 
 const q = new URLSearchParams(location.search);
 const WIDTHS = [270, 480, 1100];
@@ -211,11 +222,165 @@ function renderProps(sec) {
   loop();
 }
 
+// ── M3: 플레이어 비교 (codixel vs Pixelbolt) ─────────────────
+const PSETS = [
+  { name: "codixel", pal: PAL_CODIXEL, fr: FR_CODIXEL },
+  { name: "Pixelbolt", pal: PAL_PIXELBOLT, fr: FR_PIXELBOLT },
+];
+const PSTATES = ["idle", "walk", "jumpUp", "fall", "land"];
+// §5.2 그리기: 앵커는 playerDrawRect, 좌향은 translate(flipX)+scale(-1,1)로 같은 16px 박스를 쓴다.
+function drawPlayer(ctx, set, state, i, p) {
+  if (!set.fr[state] || !set.fr[state][i]) throw new Error(`bad frame ${set.name} ${state} ${i}`);
+  const img = baked(`pl.${set.name}.${state}${i}`, set.fr[state][i], set.pal);
+  const r = playerDrawRect(p);
+  if (p.facing < 0) {
+    ctx.save();
+    ctx.translate(r.flipX, r.y);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, 0, 0);
+    ctx.restore();
+  } else ctx.drawImage(img, r.x, r.y);
+}
+const BOX = (facing) => ({ x: 2, y: 4, w: 12, h: 20, facing }); // 16x24 캔버스 원점에 스프라이트가 오는 히트박스
+// 상태·시각 t → 프레임 {state, i} (spec §5.2 표). land는 80ms 후 idle, 1.2초마다 재트리거.
+function pframe(state, t) {
+  t = Math.max(0, t); // 첫 rAF 타임스탬프가 loop() 시작보다 이를 수 있어 음수 방지
+  if (state === "idle") return { state, i: reducedPv ? 0 : Math.floor(t / IDLE_STEP) % 2 };
+  if (state === "walk") return { state, i: Math.floor(t * WALK_FPS) % WALK_FRAME_COUNT };
+  if (state === "land") return (t % 1.2) < LAND_MS / 1000 ? { state, i: 0 } : { state: "idle", i: reducedPv ? 0 : Math.floor(t / IDLE_STEP) % 2 };
+  return { state, i: 0 };
+}
+function cell(label, scale, draw, w = 16, h = 24) {
+  const f = figure(label, w, scale, draw, h);
+  f.className = "cell";
+  return f;
+}
+// 장면 합성(160x150, 새벽, x=880 발판): 서있기(idle/walk/land) 우·좌 5명
+function playerScene(set, scale, label = `×${scale} · 새벽 · 서있기(idle/walk/land) 우·좌`) {
+  const W = 160, H = 150, X0 = 850, Y0 = 120;
+  return figure(label, W, scale, (ctx) => {
+    drawBackground(ctx, { x: X0, y: 0 }, 0, W, 0.5, true);
+    ctx.save();
+    ctx.translate(-X0, -Y0);
+    const g = LEVEL.groundY; // 230
+    const put = (x, st, i, facing) => drawPlayer(ctx, set, st, i, { x, y: g - 20, w: 12, h: 20, facing });
+    put(856, "idle", 0, 1);
+    put(870, "walk", 2, -1);
+    put(884, "idle", 0, 1);
+    put(900, "walk", 1, -1);
+    put(916, "land", 0, 1);
+    for (const s of LEVEL.solids) if (s.x < X0 + W && s.x + s.w > X0) Sprites.drawTile(ctx, s);
+    ctx.restore();
+  }, H);
+}
+// Pixelbolt 안경 변형(hand-refine.mjs GLASSES, --variants로 생성). 이름별로 ×8 · ×3 · 1x 장면.
+function renderGlasses(sec, S) {
+  const h = document.createElement("h3");
+  h.textContent = `안경 변형 (Pixelbolt) — frames.mjs = ${GLASSES_PICK}`;
+  h.style.margin = "28px 0 8px";
+  sec.append(h);
+  const grid = document.createElement("div");
+  grid.className = "cols";
+  grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";
+  sec.append(grid);
+  for (const [name, v] of Object.entries(GLASSES_VARIANTS)) {
+    const set = { name: `gl.${name}`, pal: PAL_PIXELBOLT, fr: v.frames };
+    const col = document.createElement("div");
+    grid.append(col);
+    const t = document.createElement("h3");
+    t.textContent = `${name}${name === GLASSES_PICK ? " ★ 채택" : ""}`;
+    col.append(t, Object.assign(document.createElement("div"), { className: "hint", textContent: v.label }));
+    heading(col, `×${S} idle 0 · 우/좌`);
+    rowOf(col, [1, -1].map((f) => cell(f > 0 ? "우향" : "좌향", S, (ctx) => drawPlayer(ctx, set, "idle", 0, BOX(f)))));
+    heading(col, "×3 idle0 · walk1 · land · 좌향");
+    rowOf(col, [["idle", 0, 1], ["walk", 1, 1], ["land", 0, 1], ["idle", 0, -1]].map(([st, i, f]) =>
+      cell(`${st}${i ? " " + i : ""}`, 3, (ctx) => drawPlayer(ctx, set, st, i, BOX(f)))));
+    heading(col, "1x 장면 / ×2");
+    rowOf(col, [playerScene(set, 1, "×1"), playerScene(set, 2, "×2")]);
+  }
+}
+function renderPlayer(sec) {
+  const S = +(q.get("s") || 8);
+  const ps = { facing: 1, pick: "walk" };
+  const live = []; // {ctx, state|null, set}
+  const ctl = document.createElement("div");
+  ctl.className = "ctl";
+  const fbtn = document.createElement("button");
+  const setF = () => { fbtn.textContent = ps.facing > 0 ? "방향: 우향 →" : "방향: ← 좌향"; };
+  fbtn.onclick = () => { ps.facing = -ps.facing; setF(); };
+  setF();
+  ctl.append(fbtn, Object.assign(document.createElement("span"), { textContent: "선택 상태:", className: "hint" }));
+  const pbtns = PSTATES.map((st) => {
+    const b = document.createElement("button");
+    b.textContent = st;
+    b.onclick = () => { ps.pick = st; pbtns.forEach((x) => x.classList.toggle("on", x === b)); };
+    if (st === ps.pick) b.className = "on";
+    ctl.append(b);
+    return b;
+  });
+  sec.append(ctl);
+
+  const cols = document.createElement("div");
+  cols.className = "cols";
+  sec.append(cols);
+  for (const set of PSETS) {
+    const col = document.createElement("div");
+    cols.append(col);
+    const h3 = document.createElement("h3");
+    h3.textContent = set.name;
+    col.append(h3);
+
+    // 1) 프레임 시트 ×8: 우향/좌향 (같은 16px 박스)
+    heading(col, `프레임 시트 ×${S} — 위 우향 / 아래 좌향(반전)`);
+    for (const facing of [1, -1]) {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.gap = "8px";
+      for (const st of PSTATES)
+        set.fr[st].forEach((_, i) =>
+          row.append(cell(`${st}${set.fr[st].length > 1 ? " " + i : ""}`, S, (ctx) => drawPlayer(ctx, set, st, i, BOX(facing)))));
+      col.append(row);
+    }
+
+    // 2) 라이브 재생 ×8
+    heading(col, `라이브 ×${S} — idle 0.5s/프레임 · walk 10fps · land 80ms→idle`);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.style.gap = "8px";
+    for (const st of PSTATES) {
+      const c = cell(st, S, () => {});
+      live.push({ ctx: c.querySelector("canvas").getContext("2d"), state: st, set });
+      row.append(c);
+    }
+    const sel = cell("선택(위 버튼)", S, () => {});
+    live.push({ ctx: sel.querySelector("canvas").getContext("2d"), state: null, set });
+    row.append(sel);
+    col.append(row);
+
+    // 3) 장면 합성: 실제 배경 + 지면/발판 타일, 그리기 순서 배경 → 플레이어 → 타일
+    heading(col, "장면 — x=880 발판(y=194,h=14) 위·아래, 1x / 3x. 발판 밑 3명은 머리카락이 발판 뒤");
+    const r2 = document.createElement("div");
+    r2.className = "row";
+    r2.append(playerScene(set, 1), playerScene(set, 3));
+    col.append(r2);
+  }
+  renderGlasses(sec, S);
+  ticks.push((t) => {
+    for (const l of live) {
+      l.ctx.clearRect(0, 0, 16, 24);
+      const f = pframe(l.state || ps.pick, t);
+      drawPlayer(l.ctx, l.set, f.state, f.i, BOX(ps.facing));
+    }
+  });
+  loop();
+}
+
 // 탭 레지스트리: 이후 단계(소품 시트·플레이어 비교·이펙트)는 여기에 한 줄씩 추가.
 const TABS = [
   { id: "bg", label: "M1 배경", render: renderBg },
   { id: "tiles", label: "M2 타일", render: renderTiles },
   { id: "props", label: "M2 소품", render: renderProps },
+  { id: "player", label: "M3 플레이어 비교", render: renderPlayer },
 ];
 
 const cur = TABS.find((t) => t.id === q.get("tab")) || TABS[0];
