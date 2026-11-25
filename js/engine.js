@@ -7,6 +7,7 @@ import { nextAnim } from "./anim.js";
 export const VIEW_W = 480;
 export const VIEW_H = 270;
 export const COIN_SIZE = 8; // 코인 스프라이트/히트박스 공유 크기(px)
+export const OPEN_SEC = 0.6; // 상자 열림 시퀀스 길이(초)
 
 // 물리 상수 (단위: px, 초)
 export const PHYS = {
@@ -125,7 +126,7 @@ export function makePlayer(level) {
 // 브라우저 전용 게임 컨트롤러 (sprites/audio 주입)
 // ───────────────────────────────────────────────────────────────
 export class Game {
-  constructor({ ctx, level, sprites, audio, input, reduced = false, onCoin, onTreasure }) {
+  constructor({ ctx, level, sprites, audio, input, reduced = false, onCoin, onTreasure, onOpening }) {
     this.ctx = ctx;
     this.level = level;
     this.sprites = sprites;
@@ -135,8 +136,9 @@ export class Game {
     this.sprites.reduced = reduced;
     this.onCoin = onCoin;
     this.onTreasure = onTreasure;
+    this.onOpening = onOpening;
 
-    this.state = "title"; // 'title' | 'play' | 'modal'
+    this.state = "title"; // 'title' | 'play' | 'opening' | 'modal'
     this.player = makePlayer(level);
     this.cam = { x: 0 };
     this.viewW = VIEW_W; // 화면 비율에 따라 main에서 동적 갱신(세로 VIEW_H는 고정)
@@ -147,6 +149,9 @@ export class Game {
     this.prevJump = false;
     this.atChest = false;
     this.anim = null; // 플레이어 애니메이션 상태(anim.js nextAnim), 타이틀·reset 직후엔 null
+    this.chestOpened = false; // 한 번 열면 true(모달을 닫아도 열린 채 유지, reset에서만 해제)
+    this.openTimer = 0; // opening 경과 시간(초)
+    this.openFired = true; // opening 종료(onTreasure 발사/취소) 후 true → 중복 발사 방지
   }
 
   reset() {
@@ -157,20 +162,52 @@ export class Game {
     this.prevJump = false;
     this.atChest = false;
     this.anim = null;
+    this.chestOpened = false;
+    this.openTimer = 0;
+    this.openFired = true;
+  }
+
+  // 스킵 버튼 등 외부에서 opening을 끊을 때: 이 시퀀스에서 onTreasure가 더는 나가지 않게 한다.
+  // state 전환은 호출자(main.js)가 맡는다.
+  cancelOpening() {
+    if (this.state === "opening") this.openFired = true;
   }
 
   update(dt) {
-    this.animT += Math.min(dt, 1 / 30);
-    if (this.state !== "play") return;
-    dt = Math.min(dt, 1 / 30);
+    dt = Math.min(dt, 1 / 30); // 탭 전환 등 거대 dt 방지(opening이 한 프레임에 끝나지 않게)
+    this.animT += dt;
 
+    // opening 중에도 점프 엣지를 계속 추적 → 누른 채 도착해도 새 엣지가 아니면 스킵되지 않음
     const jumpEdge = this.input.jump && !this.prevJump;
+    if (this.state === "opening") {
+      this.prevJump = this.input.jump;
+      if (this.openFired) return;
+      this.openTimer += dt;
+      // 플레이어는 제자리 idle(이동 입력 무시)
+      this.player.vx = 0;
+      this.anim = nextAnim(this.anim, this.player, null, { moveX: 0, jump: false }, dt, { reduced: this.reduced });
+      if (jumpEdge || this.openTimer >= OPEN_SEC) {
+        this.openFired = true;
+        this.onTreasure?.();
+      }
+      return;
+    }
+    if (this.state !== "play") return;
     this.prevJump = this.input.jump;
 
     // 보물상자 근접 시 점프키 = 열기
     this.atChest = intersect(this.player, this.level.chest);
     if (this.atChest && jumpEdge) {
-      this.onTreasure?.();
+      if (this.reduced || this.chestOpened) {
+        this.chestOpened = true;
+        this.onTreasure?.(); // 이미 열렸거나 reduced-motion: 연출 없이 즉시 모달
+      } else {
+        this.chestOpened = true;
+        this.openTimer = 0;
+        this.openFired = false;
+        this.state = "opening";
+        this.onOpening?.();
+      }
       return;
     }
 
@@ -223,8 +260,9 @@ export class Game {
       this.sprites.drawCoin(ctx, c.x, cy, this.animT);
     }
 
-    // 보물상자 (openT는 Task 9 열림 연출 전까지 0)
-    this.sprites.drawChest(ctx, this.level.chest, { opened: this.state === "modal", openT: 0, near: this.atChest }, this.animT);
+    // 보물상자: 한 번 열리면 chestOpened 유지, opening 동안 openT 0→1로 프레임 진행
+    const openT = this.state === "opening" ? clamp(this.openTimer / OPEN_SEC, 0, 1) : 1;
+    this.sprites.drawChest(ctx, this.level.chest, { opened: this.chestOpened, openT, near: this.atChest }, this.animT);
 
     // 플레이어
     this.sprites.drawPlayer(ctx, this.player, this.anim);

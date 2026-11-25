@@ -90,8 +90,9 @@ body[data-state="modal"] #topbar { display: none; }
   animation: bob 0.9s ease-in-out infinite;
 }
 @keyframes bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -6px); } }
-body[data-state="play"] #hud, body[data-state="play"] #hint { display: flex; }
-body.touch[data-state="play"] #hint { display: none; } /* 터치엔 버튼이 있으므로 힌트 숨김 */
+body[data-state="play"] #hud, body[data-state="play"] #hint,
+body[data-state="opening"] #hud, body[data-state="opening"] #hint { display: flex; }
+body.touch[data-state="play"] #hint, body.touch[data-state="opening"] #hint { display: none; } /* 터치엔 버튼이 있으므로 힌트 숨김 */
 
 /* 오버레이 공통 */
 .overlay {
@@ -210,7 +211,7 @@ kbd {
   z-index: 4;
   pointer-events: none;
 }
-body.touch[data-state="play"] #touch { display: flex; }
+body.touch[data-state="play"] #touch, body.touch[data-state="opening"] #touch { display: flex; }
 .dpad { display: flex; gap: 14px; }
 .tbtn {
   pointer-events: auto;

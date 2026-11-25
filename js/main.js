@@ -31,6 +31,10 @@ const game = new Game({
   reduced,
   onCoin: (i) => ui.toast(`프로젝트 ${i + 1}. ${PROJECTS[i].title}`),
   onTreasure: () => openTreasure(),
+  onOpening: () => {
+    audio.treasure(); // 열림 시작 시 효과음(모달 진입 때는 중복 재생 안 함)
+    setState("opening");
+  },
 });
 
 const ui = initUI({
@@ -51,12 +55,14 @@ function startGame() {
 }
 
 function openTreasure() {
-  // 모달 진입 전 현재 화면/포커스를 기억 → 닫을 때 복귀
+  const fromOpening = game.state === "opening";
+  if (fromOpening) game.cancelOpening(); // 스킵/재입력: 이 시퀀스의 onTreasure가 다시 나가지 않게
+  // 모달 진입 전 현재 화면/포커스를 기억 → 닫을 때 복귀 (opening은 play로 정규화)
   if (game.state !== "modal") {
-    prevState = game.state;
+    prevState = fromOpening ? "play" : game.state;
     lastFocus = document.activeElement;
   }
-  audio.treasure();
+  if (!fromOpening) audio.treasure(); // opening 진입 시 이미 재생됨
   setState("modal");
   ui.loadPdf(); // 지연 로드: 모달을 처음 열 때만 PDF를 주입
   ui.focusModal();
@@ -82,8 +88,14 @@ addEventListener("keydown", (e) => {
     startGame();
     return;
   }
-  // 플레이 중 점프키의 페이지 스크롤만 차단(모달/폼 포커스는 건드리지 않음)
-  if (st === "play" && KEYS_JUMP.includes(e.key) && !isInteractive(document.activeElement)) {
+  // opening 중 Enter/Space = 바로 모달(스킵). 버튼/링크 포커스는 그쪽에 양보
+  if (st === "opening" && (e.key === "Enter" || e.key === " ") && !isInteractive(document.activeElement)) {
+    e.preventDefault();
+    openTreasure();
+    return;
+  }
+  // 플레이/opening 중 점프키의 페이지 스크롤만 차단(모달/폼 포커스는 건드리지 않음)
+  if ((st === "play" || st === "opening") && KEYS_JUMP.includes(e.key) && !isInteractive(document.activeElement)) {
     e.preventDefault();
   }
   if (KEYS_LEFT.includes(e.key)) input.left = true;
@@ -155,5 +167,5 @@ requestAnimationFrame(frame);
 // 로컬 개발 환경에서만 디버그 훅 노출(프로덕션 도메인에는 노출 안 함)
 if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
   window.__game = game;
-  window.__setState = setState;
+  window.__setState = setState; // state: 'title'|'play'|'opening'|'modal'
 }
