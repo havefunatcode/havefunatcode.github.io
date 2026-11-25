@@ -1,5 +1,5 @@
 // 부트스트랩: 에셋(코드 생성)·입력·상태기계·게임 루프를 연결한다.
-import { Game, VIEW_W, VIEW_H } from "./engine.js";
+import { Game, VIEW_W, VIEW_H, isOpeningSkip } from "./engine.js";
 import { Sprites } from "./sprites.js";
 import { Audio } from "./audio.js";
 import { LEVEL } from "./level.js";
@@ -88,8 +88,8 @@ addEventListener("keydown", (e) => {
     startGame();
     return;
   }
-  // opening 중 Enter/Space = 바로 모달(스킵). 버튼/링크 포커스는 그쪽에 양보
-  if (st === "opening" && (e.key === "Enter" || e.key === " ") && !isInteractive(document.activeElement)) {
+  // opening 중 Enter/Space = 바로 모달(스킵). 버튼/링크 포커스는 그쪽에 양보, 키 반복(repeat)은 무시
+  if (isOpeningSkip(e, st, isInteractive(document.activeElement))) {
     e.preventDefault();
     openTreasure();
     return;

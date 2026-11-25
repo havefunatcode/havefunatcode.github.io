@@ -1,5 +1,5 @@
 // Game 상자 열림(opening) 상태 테스트. 실행: node tests/game.test.mjs
-import { Game, OPEN_SEC, makePlayer } from "../js/engine.js";
+import { Game, OPEN_SEC, makePlayer, isOpeningSkip } from "../js/engine.js";
 
 let pass = 0,
   fail = 0;
@@ -116,6 +116,14 @@ ok(OPEN_SEC === 0.6, "OPEN_SEC === 0.6");
   input.jump = true; g.update(1 / 60);
   g.reset();
   ok(g.chestOpened === false && g.openTimer === 0, "reset clears chestOpened/openTimer");
+}
+
+{
+  ok(isOpeningSkip({ key: " ", repeat: false }, "opening", false) === true, "fresh Space in opening skips");
+  ok(isOpeningSkip({ key: " ", repeat: true }, "opening", false) === false, "auto-repeat Space does not skip");
+  ok(isOpeningSkip({ key: "Enter", repeat: true }, "opening", false) === false, "auto-repeat Enter does not skip");
+  ok(isOpeningSkip({ key: "Enter", repeat: false }, "opening", true) === false, "interactive focus yields");
+  ok(isOpeningSkip({ key: " ", repeat: false }, "play", false) === false, "not in opening -> no skip");
 }
 
 console.log(`game.test: ${pass} passed, ${fail} failed`);

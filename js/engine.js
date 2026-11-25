@@ -18,6 +18,11 @@ export const PHYS = {
   COYOTE: 0.08, // 발판에서 떨어진 직후 점프 허용 시간
 };
 
+// opening 중 Enter/Space 스킵 판정. OS 자동반복(repeat) keydown은 제외 — 누른 채 있으면 0.6초 전에 모달이 열리는 것 방지
+export function isOpeningSkip(e, state, interactiveFocus) {
+  return state === "opening" && !e.repeat && (e.key === "Enter" || e.key === " ") && !interactiveFocus;
+}
+
 export function clamp(v, lo, hi) {
   return v < lo ? lo : v > hi ? hi : v;
 }
