@@ -1,6 +1,7 @@
 // 그리기 모듈(브라우저 전용). 외부 에셋 없이 코드로 픽셀 스프라이트를 prebake 하고,
 // 지면/상자/배경/HUD는 캔버스 도형으로 그린다. 라이선스 문제 0.
 import { VIEW_W, VIEW_H } from "./engine.js";
+import { baked } from "./art/bake.js";
 
 // ── 픽셀 스프라이트 정의 ───────────────────────────────────────
 const PAL_PLAYER = {
@@ -37,28 +38,6 @@ const COIN_PX = [
   ".OYYYYO.",
   "..OOOO..",
 ];
-
-function bake(px, pal) {
-  const h = px.length;
-  const w = px[0].length;
-  const cv = document.createElement("canvas");
-  cv.width = w;
-  cv.height = h;
-  const c = cv.getContext("2d");
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const col = pal[px[y][x]];
-      if (col) {
-        c.fillStyle = col;
-        c.fillRect(x, y, 1, 1);
-      }
-    }
-  }
-  return cv;
-}
-
-const PLAYER = bake(PLAYER_PX, PAL_PLAYER);
-const COIN = bake(COIN_PX, PAL_COIN);
 
 // ── 시간대 연출: 진행도(0=저녁 → 1=오전)에 따라 하늘/해/언덕 보간 ──
 const lerp = (a, b, f) => a + (b - a) * f;
@@ -194,7 +173,7 @@ export const Sprites = {
   },
 
   drawCoin(ctx, x, y) {
-    ctx.drawImage(COIN, Math.round(x), Math.round(y));
+    ctx.drawImage(baked("coin", COIN_PX, PAL_COIN), Math.round(x), Math.round(y));
   },
 
   drawPlayer(ctx, p, walkPhase) {
@@ -203,9 +182,9 @@ export const Sprites = {
     if (p.facing < 0) {
       ctx.translate(Math.round(p.x + p.w), Math.round(p.y + bob));
       ctx.scale(-1, 1);
-      ctx.drawImage(PLAYER, 0, 0);
+      ctx.drawImage(baked("player", PLAYER_PX, PAL_PLAYER), 0, 0);
     } else {
-      ctx.drawImage(PLAYER, Math.round(p.x), Math.round(p.y + bob));
+      ctx.drawImage(baked("player", PLAYER_PX, PAL_PLAYER), Math.round(p.x), Math.round(p.y + bob));
     }
     ctx.restore();
   },
