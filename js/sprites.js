@@ -1,7 +1,8 @@
 // 그리기 모듈(브라우저 전용). 외부 에셋 없이 코드로 픽셀 스프라이트를 prebake 하고,
-// 지면/상자는 캔버스 도형으로 그린다(배경은 background.js). 라이선스 문제 0.
+// 상자는 캔버스 도형으로 그린다(배경은 background.js, 지면·발판 타일 데이터는 art/tiles.js). 라이선스 문제 0.
 import { VIEW_W } from "./engine.js";
 import { baked } from "./art/bake.js";
+import { PAL_TILE, GROUND, PLAT, groundVariant } from "./art/tiles.js";
 import { drawBackground as drawBg } from "./background.js";
 
 // ── 픽셀 스프라이트 정의 ───────────────────────────────────────
@@ -40,36 +41,69 @@ const COIN_PX = [
   "..OOOO..",
 ];
 
+// 솔리드 1개를 (0,0) 기준 캔버스에 타일로 합성. 폭·높이는 16·8의 배수가 아니어도 된다.
+// 흙 변형 해시는 월드 열(s.x 기준)로 고른다 → 세그먼트마다 무늬가 다르다.
+const solidCache = new Map();
+function composeTile(ctx, s) {
+  const { w, h, kind } = s;
+  const x = 0, y = 0;
+  if (kind === "platform") {
+    // 왼끝 8 + 중간(8px 반복, 마지막 조각은 자름) + 오른끝 8. 높이는 14 고정 스프라이트.
+    const ph = Math.min(h, 14);
+    ctx.drawImage(baked("plat.left", PLAT.left, PAL_TILE), 0, 0, 8, ph, x, y, 8, ph);
+    const mid = baked("plat.mid", PLAT.mid, PAL_TILE);
+    for (let cx = x + 8; cx < x + w - 8; cx += 8) {
+      const cw = Math.min(8, x + w - 8 - cx);
+      ctx.drawImage(mid, 0, 0, cw, ph, cx, y, cw, ph);
+    }
+    ctx.drawImage(baked("plat.right", PLAT.right, PAL_TILE), 0, 0, 8, ph, x + w - 8, y, 8, ph);
+    return;
+  }
+  // ground: 윗줄 16행 + 몸통(h-16, 아래 조각은 자름). 왼·오른 끝 열 = 끝 타일(오른끝은 세그먼트 오른쪽 정렬),
+  // 그 사이 안쪽 열은 왼쪽부터 16칸씩, 마지막 안쪽 열은 오른끝 타일 앞에서 자른다(spec §5.3).
+  const top = baked("ground.top", GROUND.top, PAL_TILE);
+  const fills = [baked("ground.fill0", GROUND.fill[0], PAL_TILE), baked("ground.fill1", GROUND.fill[1], PAL_TILE)];
+  const th = Math.min(16, h);
+  const bodyH = h - th;
+  for (let cx = x + 16; cx < x + w - 16; cx += 16) {
+    const cw = Math.min(16, x + w - 16 - cx);
+    ctx.drawImage(top, 0, 0, cw, th, cx, y, cw, th);
+    for (let r = 0; r < bodyH; r += 16) {
+      const rh = Math.min(16, bodyH - r);
+      const f = fills[groundVariant(Math.floor((s.x + cx) / 16), (r >> 4) + 1)];
+      ctx.drawImage(f, 0, 0, cw, rh, cx, y + th + r, cw, rh);
+    }
+  }
+  const endCol = (img, ex) => {
+    ctx.drawImage(img, 0, 0, 16, th, ex, y, 16, th);
+    for (let r = 0; r < bodyH; r += 8) {
+      const rh = Math.min(8, bodyH - r);
+      ctx.drawImage(img, 0, 8, 16, rh, ex, y + th + r, 16, rh); // 8~15행 옆면 띠 반복
+    }
+  };
+  endCol(baked("ground.left", GROUND.left, PAL_TILE), x);
+  endCol(baked("ground.right", GROUND.right, PAL_TILE), x + w - 16);
+}
+
 export const Sprites = {
   // 배경은 background.js(화풍 B 레이어)에 위임. reduced는 Game 생성자가 설정.
   drawBackground(ctx, cam, t, viewW = VIEW_W, progress = 0) {
     drawBg(ctx, cam, t, viewW, progress, this.reduced);
   },
 
+  // 지면·발판 타일(js/art/tiles.js). 솔리드마다 첫 호출 때 한 장으로 합성해 캐시한다
+  // (프레임당 drawImage 1회; 조각별로 그리면 ~950회/프레임, 1100폭 데스크톱 0.42ms).
   drawTile(ctx, s) {
-    const { x, y, w, h, kind } = s;
-    if (kind === "platform") {
-      ctx.fillStyle = "#8a5a2b";
-      ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = "#a9743c";
-      ctx.fillRect(x, y, w, 3);
-      ctx.fillStyle = "#5e3a16";
-      ctx.fillRect(x, y + h - 2, w, 2);
-      return;
+    const key = `${s.kind}:${s.x},${s.y},${s.w},${s.h}`;
+    let cv = solidCache.get(key);
+    if (!cv) {
+      cv = document.createElement("canvas");
+      cv.width = s.w;
+      cv.height = s.h;
+      composeTile(cv.getContext("2d"), s);
+      solidCache.set(key, cv);
     }
-    // ground
-    ctx.fillStyle = "#7a5230";
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = "#5bbf63";
-    ctx.fillRect(x, y, w, 7);
-    ctx.fillStyle = "#3f9e4a";
-    ctx.fillRect(x, y + 7, w, 2);
-    // 흙 텍스처
-    ctx.fillStyle = "rgba(0,0,0,0.12)";
-    for (let i = x + 6; i < x + w; i += 22) {
-      ctx.fillRect(i, y + 16, 3, 3);
-      ctx.fillRect(i + 10, y + 30, 2, 2);
-    }
+    ctx.drawImage(cv, s.x, s.y);
   },
 
   drawCoin(ctx, x, y) {

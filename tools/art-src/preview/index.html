@@ -33,20 +33,23 @@
 import { drawBackground } from "../../../js/background.js";
 import { VIEW_H } from "../../../js/engine.js";
 import { LEVEL } from "../../../js/level.js";
+import { Sprites } from "../../../js/sprites.js";
+import { baked } from "../../../js/art/bake.js";
+import { PAL_TILE, GROUND, PLAT } from "../../../js/art/tiles.js";
 
 const q = new URLSearchParams(location.search);
 const WIDTHS = [270, 480, 1100];
 const PROGRESS = [[0, "저녁"], [0.5, "새벽"], [1, "오전"]];
 
-function figure(label, w, scale, draw) {
+function figure(label, w, scale, draw, h = VIEW_H) {
   const fig = document.createElement("figure");
   const cap = document.createElement("figcaption");
   cap.textContent = label;
   const cv = document.createElement("canvas");
   cv.width = w;
-  cv.height = VIEW_H;
+  cv.height = h;
   cv.style.width = w * scale + "px";
-  cv.style.height = VIEW_H * scale + "px";
+  cv.style.height = h * scale + "px";
   const ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   draw(ctx);
@@ -83,9 +86,33 @@ function renderBg(sec) {
   }
 }
 
+// ── M2: 지면·발판 타일 ───────────────────────────────────────
+function renderTiles(sec) {
+  const sheet = [["top", GROUND.top], ["left", GROUND.left], ["right", GROUND.right], ["fill a", GROUND.fill[0]],
+    ["fill b", GROUND.fill[1]], ["plat left", PLAT.left], ["plat mid", PLAT.mid], ["plat right", PLAT.right]];
+  const h1 = document.createElement("h2");
+  h1.textContent = "타일 시트 ×8";
+  const row = document.createElement("div");
+  row.className = "row";
+  for (const [name, px] of sheet)
+    row.append(figure(`${name} ${px[0].length}x${px.length}`, px[0].length, 8,
+      (ctx) => ctx.drawImage(baked("pv." + name, px, PAL_TILE), 0, 0), px.length));
+  // 게임과 같은 drawTile: 구덩이 340·760 + 계단 발판(56) 3개, 새벽 배경
+  const h2 = document.createElement("h2");
+  h2.textContent = "지면 + 발판 (월드 x 300~860, ×2)";
+  const x0 = 300, w = 560;
+  const strip = figure(`drawTile · 새벽`, w, +(q.get("s") || 2), (ctx) => {
+    drawBackground(ctx, { x: x0, y: 0 }, 0, w, 0.5, true);
+    ctx.translate(-x0, 0);
+    for (const s of LEVEL.solids) Sprites.drawTile(ctx, s);
+  });
+  sec.append(h1, row, h2, strip);
+}
+
 // 탭 레지스트리: 이후 단계(소품 시트·플레이어 비교·이펙트)는 여기에 한 줄씩 추가.
 const TABS = [
   { id: "bg", label: "M1 배경", render: renderBg },
+  { id: "tiles", label: "M2 타일", render: renderTiles },
 ];
 
 const cur = TABS.find((t) => t.id === q.get("tab")) || TABS[0];

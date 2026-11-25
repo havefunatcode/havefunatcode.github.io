@@ -1,0 +1,30 @@
+{
+  "format": "pixelforge-autotile",
+  "version": 1,
+  "name": "groundB",
+  "tile": 16,
+  "mode": "cardinal",
+  "palette": {
+    "G": "#8fbf6a", "g": "#6c9a4f",
+    "D": "#9c7458", "d": "#7d5a44", "h": "#b48a6a",
+    "S": "#7fa68c"
+  },
+  "terrain": {
+    "seed": 5,
+    "fill": {"color": "D", "speckle": [{"color": "d", "amount": 0.08, "size": 2}, {"color": "h", "amount": 0.05, "size": 2}]},
+    "edges": {
+      "all": {"depth": 0, "bands": ["d"]},
+      "n": {"depth": 1, "bands": ["G", "G", "G", "G", "g", "g"], "tufts": {"colors": ["G"], "amount": 0.6}},
+      "w": {"bands": ["d", "h"]},
+      "e": {"bands": ["d", "d"]}
+    },
+    "round": 1
+  },
+  "frame": "ground-{mask}-{variant}",
+  "variants": [
+    {"name": "a", "weight": 1},
+    {"name": "b", "weight": 1, "terrain": {"fill": {"seed": 11}}}
+  ],
+  "preview": {"background": "S"},
+  "sheet": {"columns": 16}
+}

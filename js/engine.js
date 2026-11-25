@@ -208,9 +208,6 @@ export class Game {
     ctx.save();
     ctx.translate(-Math.round(cam.x), 0);
 
-    // 솔리드(지면/발판)
-    for (const s of this.level.solids) this.sprites.drawTile(ctx, s);
-
     // 코인 (reduced-motion이면 진동 정지)
     for (const c of this.level.coins) {
       if (c.got) continue;
@@ -223,6 +220,11 @@ export class Game {
 
     // 플레이어
     this.sprites.drawPlayer(ctx, this.player, this.walkPhase);
+
+    // 솔리드(지면/발판) — 플레이어 다음: 히트박스 밖 머리카락이 발판 뒤로 들어가 보이게(spec §5.2)
+    for (const s of this.level.solids) this.sprites.drawTile(ctx, s);
+
+    // 앞 이펙트 자리(spec §5.2 순서: 배경 → 코인·상자 → 플레이어 → 타일 → 앞 이펙트)
 
     ctx.restore();
     // HUD/힌트/안내 텍스트는 DOM(ui.js)에서 렌더 — 픽셀화 캔버스 텍스트 깨짐 방지
