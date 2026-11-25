@@ -19,7 +19,7 @@
 - `js/art/*.js` 데이터·검증 모듈은 import 시 `document`·`window`를 건드리지 않는다(Node 테스트).
 - 화풍 B: 검은 외곽선 금지(같은 계열 최암색), 오브젝트당 3~4톤, 하늘은 밴드+디더(그라디언트 금지). 기준 색은 spec §5.1·§5.2 표 그대로.
 - 플레이어 스프라이트 16x24, 히트박스 12x20. 코인 8x8(6프레임 8fps), 상자 히트박스 44x36·스프라이트 32x28, 지면 타일 16x16, 발판 높이 14.
-- `prefers-reduced-motion`: idle 숨쉬기·코인 회전·구름 표류·상자 반짝임·이펙트 전부 정지, `opening` 생략. walk·land는 유지.
+- `prefers-reduced-motion`: idle 숨쉬기·코인 회전·구름 표류·이펙트 전부 정지, `opening` 생략. walk·land는 유지. 상자 반짝임은 reduced에서도 1Hz 이하 점멸(2026-11-25 M2 게이트 사용자 결정, spec §5.5).
 - 가로 폭 270~1100 전 구간 지원(`resize()`는 수정 금지).
 - 추가 JS 비압축 합계 250,000B 이하(측정: `js/` 전체 − 기준선 30,999B).
 - pixelfx: `src/fx/index.js`·`gallery/`·폰트·`docs/`·`tools/`·`skills/` 복사 금지. 모든 파일 맨 위 출처 주석 보존. 스킬의 Patch 게시·`@patchgg/cli` 설치 거절.
