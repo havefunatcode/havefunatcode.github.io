@@ -2,6 +2,7 @@
 import { validateSprite } from "../js/art/check.js";
 import { B, SKY_KEYS, skyAt } from "../js/art/palette.js";
 import { PAL_TILE, GROUND, PLAT, groundVariant } from "../js/art/tiles.js";
+import { COIN_FRAMES, CHEST_FRAMES, CHEST_GLINT, CLOUDS, TREES, PAL_COIN, PAL_CHEST, PAL_CLOUD, PAL_TREE } from "../js/art/props.js";
 import { Game } from "../js/engine.js";
 import { LEVEL } from "../js/level.js";
 
@@ -54,6 +55,39 @@ for (let tx = 0; tx < 10; tx++)
 ok(det, "groundVariant deterministic");
 ok(only01, "groundVariant returns only 0|1");
 ok(seen.has(0) && seen.has(1), "groundVariant: both values appear in 100 cells");
+
+// ── 소품: 코인·상자·구름·나무(Task 4) ──
+const sizeOf = (px) => ({ w: (px && px[0] && px[0].length) || 0, h: (px && px.length) || 0 });
+ok(Array.isArray(COIN_FRAMES) && COIN_FRAMES.length === 6, "COIN_FRAMES has 6 frames");
+for (const [i, f] of (COIN_FRAMES || []).entries()) {
+  const e = validateSprite(f, PAL_COIN, { w: 8, h: 8 });
+  ok(e.length === 0, `COIN_FRAMES[${i}] 8x8 valid: ${e.join("; ")}`);
+}
+ok(Array.isArray(CHEST_FRAMES) && CHEST_FRAMES.length === 4, "CHEST_FRAMES has 4 frames (closed, open1, open2, openGlow)");
+for (const [i, f] of (CHEST_FRAMES || []).entries()) {
+  const e = validateSprite(f, PAL_CHEST, { w: 32, h: 28 });
+  ok(e.length === 0, `CHEST_FRAMES[${i}] 32x28 valid: ${e.join("; ")}`);
+}
+ok(CHEST_GLINT && CHEST_GLINT.x >= 0 && CHEST_GLINT.x < 32 && CHEST_GLINT.y >= 0 && CHEST_GLINT.y < 28 &&
+  CHEST_FRAMES[0][CHEST_GLINT.y][CHEST_GLINT.x] !== ".", "chest glint sits on an opaque pixel of the closed frame");
+ok(Array.isArray(CLOUDS) && CLOUDS.length === 3, "CLOUDS has 3 kinds");
+for (const [i, c] of (CLOUDS || []).entries()) {
+  const sz = sizeOf(c);
+  const e = validateSprite(c, PAL_CLOUD, sz);
+  ok(e.length === 0 && sz.w >= 16 && sz.w <= 64 && sz.h >= 6 && sz.h <= 24, `CLOUDS[${i}] ${sz.w}x${sz.h} valid: ${e.join("; ")}`);
+}
+ok(Array.isArray(TREES) && TREES.length >= 2 && TREES.length <= 3, "TREES has 2~3 kinds");
+for (const [i, t] of (TREES || []).entries()) {
+  const sz = sizeOf(t);
+  const e = validateSprite(t, PAL_TREE, sz);
+  ok(e.length === 0 && sz.w >= 8 && sz.w <= 32 && sz.h >= 12 && sz.h <= 40, `TREES[${i}] ${sz.w}x${sz.h} valid: ${e.join("; ")}`);
+}
+const palIs = (pal, cols) => pal && Object.values(pal).every((c) => cols.includes(c));
+ok(palIs(PAL_COIN, [...B.coin3, null]), "PAL_COIN uses only spec coin colours");
+ok(palIs(PAL_CHEST, [...B.chest4, B.coin3[0], null]), "PAL_CHEST uses only spec chest colours (+ coin highlight for glow)");
+ok(palIs(PAL_CLOUD, [B.cloud, B.cloudSh, null]), "PAL_CLOUD uses only spec cloud colours");
+ok(palIs(PAL_TREE, [B.trunk, B.leaf, B.leafHi, B.leafSh, null]), "PAL_TREE uses only spec tree colours");
+ok(PAL_TREE && ["t", "L", "h", "s"].every((k) => k in PAL_TREE), "PAL_TREE keys t/L/h/s (time-of-day recolour map)");
 
 // 그리기 순서(spec §5.2): 배경 → 코인 → 상자 → 플레이어 → 타일
 {

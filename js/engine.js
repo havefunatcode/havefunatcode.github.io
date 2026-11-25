@@ -135,7 +135,8 @@ export class Game {
     this.viewW = VIEW_W; // 화면 비율에 따라 main에서 동적 갱신(세로 VIEW_H는 고정)
     this.coins = 0;
     this.totalCoins = level.coins.length;
-    this.t = 0;
+    this.t = 0; // 물리·게임 시계(play에서만 흐름)
+    this.animT = 0; // 그리기 시계(모든 state에서 흐름 — 타이틀·모달 뒤에서도 코인 회전, spec §5.4)
     this.prevJump = false;
     this.atChest = false;
     this.walkPhase = 0;
@@ -151,6 +152,7 @@ export class Game {
   }
 
   update(dt) {
+    this.animT += Math.min(dt, 1 / 30);
     if (this.state !== "play") return;
     dt = Math.min(dt, 1 / 30);
 
@@ -208,15 +210,15 @@ export class Game {
     ctx.save();
     ctx.translate(-Math.round(cam.x), 0);
 
-    // 코인 (reduced-motion이면 진동 정지)
+    // 코인 (그리기 시계 animT로 회전·흔들림 — reduced-motion이면 둘 다 정지)
     for (const c of this.level.coins) {
       if (c.got) continue;
-      const cy = this.reduced ? c.y : c.y + Math.sin(this.t * 4 + c.x) * 1.5;
-      this.sprites.drawCoin(ctx, c.x, cy);
+      const cy = this.reduced ? c.y : c.y + Math.sin(this.animT * 4 + c.x) * 1.5;
+      this.sprites.drawCoin(ctx, c.x, cy, this.animT);
     }
 
-    // 보물상자
-    this.sprites.drawChest(ctx, this.level.chest, this.state === "modal", this.t);
+    // 보물상자 (openT는 Task 9 열림 연출 전까지 0)
+    this.sprites.drawChest(ctx, this.level.chest, { opened: this.state === "modal", openT: 0, near: this.atChest }, this.animT);
 
     // 플레이어
     this.sprites.drawPlayer(ctx, this.player, this.walkPhase);

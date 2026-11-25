@@ -1,8 +1,10 @@
-// 그리기 모듈(브라우저 전용). 외부 에셋 없이 코드로 픽셀 스프라이트를 prebake 하고,
-// 상자는 캔버스 도형으로 그린다(배경은 background.js, 지면·발판 타일 데이터는 art/tiles.js). 라이선스 문제 0.
+// 그리기 모듈(브라우저 전용). 외부 에셋 없이 코드로 픽셀 스프라이트를 prebake 한다
+// (배경은 background.js, 지면·발판 타일 데이터는 art/tiles.js, 코인·상자는 art/props.js). 라이선스 문제 0.
 import { VIEW_W } from "./engine.js";
 import { baked } from "./art/bake.js";
 import { PAL_TILE, GROUND, PLAT, groundVariant } from "./art/tiles.js";
+import { PAL_COIN, COIN_FRAMES, PAL_CHEST, CHEST_FRAMES, CHEST_GLINT } from "./art/props.js";
+import { coinFrame } from "./anim.js";
 import { drawBackground as drawBg } from "./background.js";
 
 // ── 픽셀 스프라이트 정의 ───────────────────────────────────────
@@ -27,18 +29,6 @@ const PLAYER_PX = [
   ".BBBBBBBBBB.",
   "..PPP..PPP..",
   "..SSS..SSS..",
-];
-
-const PAL_COIN = { ".": null, Y: "#ffd54a", O: "#d98e1f", W: "#fff6cf" };
-const COIN_PX = [
-  "..OOOO..",
-  ".OYYYYO.",
-  "OYYWWYYO",
-  "OYWWYYYO",
-  "OYYYYWYO",
-  "OYYYYYYO",
-  ".OYYYYO.",
-  "..OOOO..",
 ];
 
 // 솔리드 1개를 (0,0) 기준 캔버스에 타일로 합성. 폭·높이는 16·8의 배수가 아니어도 된다.
@@ -106,8 +96,10 @@ export const Sprites = {
     ctx.drawImage(cv, s.x, s.y);
   },
 
-  drawCoin(ctx, x, y) {
-    ctx.drawImage(baked("coin", COIN_PX, PAL_COIN), Math.round(x), Math.round(y));
+  // 코인 6프레임 회전(8fps, animT = Game 그리기 시계). reduced면 coinFrame이 정면 0 고정.
+  drawCoin(ctx, x, y, animT = 0) {
+    const f = coinFrame(animT, this.reduced);
+    ctx.drawImage(baked(`coin${f}`, COIN_FRAMES[f], PAL_COIN), Math.round(x), Math.round(y));
   },
 
   drawPlayer(ctx, p, walkPhase) {
@@ -123,38 +115,16 @@ export const Sprites = {
     ctx.restore();
   },
 
-  drawChest(ctx, c, open, t) {
-    const { x, y, w, h } = c;
-    // 본체
-    ctx.fillStyle = "#7a4a22";
-    ctx.fillRect(x, y + h * 0.42, w, h * 0.58);
-    ctx.fillStyle = "#e8b23a";
-    ctx.fillRect(x + w / 2 - 2, y + h * 0.42, 4, h * 0.58);
-
-    if (!open) {
-      ctx.fillStyle = "#8a5a2b";
-      ctx.fillRect(x, y, w, h * 0.46);
-      ctx.fillStyle = "#e8b23a";
-      ctx.fillRect(x, y + h * 0.42 - 3, w, 4);
-      ctx.fillStyle = "#ffd24a";
-      ctx.fillRect(x + w / 2 - 4, y + h * 0.42 - 5, 8, 9);
-      ctx.fillStyle = "#5e3a16";
-      ctx.fillRect(x + w / 2 - 1, y + h * 0.42 - 1, 2, 3);
-    } else {
-      // 열린 뚜껑
-      ctx.fillStyle = "#8a5a2b";
-      ctx.fillRect(x - 1, y - h * 0.38, w + 2, h * 0.42);
-      ctx.fillStyle = "#e8b23a";
-      ctx.fillRect(x - 1, y - h * 0.38, w + 2, 3);
-      // 빛 (reduced-motion이면 정적)
-      ctx.save();
-      ctx.globalAlpha = this.reduced ? 0.7 : 0.55 + 0.25 * Math.sin(t * 6);
-      ctx.fillStyle = "#fff4c2";
-      ctx.fillRect(x + 2, y, w - 4, h * 0.42);
-      ctx.restore();
+  // 상자 32x28을 히트박스 44x36 하단 중앙에(spec §5.5). 프레임 0 닫힘 / 1 열림1 / 2 열림2 / 3 열림+빛.
+  // openT(열림 진행)는 Task 9 전까지 0 → 열림이면 바로 3(완전히 열림)을 그린다.
+  // 닫힘 + near(atChest): 자물쇠판 1px 반짝임이 1초에 0.25초 켜진다. reduced면 점멸 없이 계속 켜 둔다(근접 표시는 유지).
+  drawChest(ctx, c, { opened = false, near = false } = {}, animT = 0) {
+    const f = opened ? 3 : 0;
+    const dx = Math.round(c.x) + 6, dy = Math.round(c.y) + 8;
+    ctx.drawImage(baked(`chest${f}`, CHEST_FRAMES[f], PAL_CHEST), dx, dy);
+    if (!opened && near && (this.reduced || animT % 1 < 0.25)) {
+      ctx.fillStyle = PAL_CHEST.g;
+      ctx.fillRect(dx + CHEST_GLINT.x, dy + CHEST_GLINT.y, 1, 1);
     }
-    ctx.strokeStyle = "#3b2510";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   },
 };

@@ -31,11 +31,14 @@
 <script type="module">
 // 개발용 미리보기(빌드 없음, 외부 에셋 없음). 단계별 탭을 TABS에 추가해 확장한다.
 import { drawBackground } from "../../../js/background.js";
-import { VIEW_H } from "../../../js/engine.js";
+import { VIEW_H, Game } from "../../../js/engine.js";
 import { LEVEL } from "../../../js/level.js";
 import { Sprites } from "../../../js/sprites.js";
 import { baked } from "../../../js/art/bake.js";
 import { PAL_TILE, GROUND, PLAT } from "../../../js/art/tiles.js";
+import { COIN_FRAMES, PAL_COIN, CHEST_FRAMES, PAL_CHEST, CHEST_GLINT, CLOUDS, PAL_CLOUD, TREES, TREE_TONES } from "../../../js/art/props.js";
+import { skyAt } from "../../../js/art/palette.js";
+import { coinFrame } from "../../../js/anim.js";
 
 const q = new URLSearchParams(location.search);
 const WIDTHS = [270, 480, 1100];
@@ -109,10 +112,110 @@ function renderTiles(sec) {
   sec.append(h1, row, h2, strip);
 }
 
+// ── M2: 소품(코인·상자·구름·나무) + 실제 장면 ─────────────────
+const reducedPv = q.get("reduced") === "1" || matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ticks = []; // requestAnimationFrame마다 (animT, dt)로 호출
+function loop() {
+  let last = performance.now(), animT = 0;
+  const step = (now) => {
+    const dt = Math.min((now - last) / 1000, 1 / 30);
+    last = now;
+    animT += dt;
+    for (const f of ticks) f(animT, dt);
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function heading(sec, text) {
+  const h = document.createElement("h2");
+  h.textContent = text;
+  sec.append(h);
+}
+function rowOf(sec, figs) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.append(...figs);
+  sec.append(row);
+}
+const sprite = (key, px, pal) => (ctx) => ctx.drawImage(baked(key, px, pal), 0, 0);
+// 나무를 진행도 p의 skyAt 색으로(배경 나무 줄과 같은 키 매핑)
+const treePal = (p) => {
+  const s = skyAt(p), pal = { ".": null };
+  for (const [k, name] of TREE_TONES) pal[k] = s[name];
+  return pal;
+};
+function renderProps(sec) {
+  const S = +(q.get("s") || 8);
+  heading(sec, `코인 8x8 ×${S} — 6프레임 8fps${reducedPv ? " (reduced: 정면 고정)" : ""} · 정지 프레임 0~5`);
+  const live = figure("animT 회전 + 흔들림", 8, S, () => {}, 12);
+  const lctx = live.querySelector("canvas").getContext("2d");
+  ticks.push((t) => {
+    lctx.clearRect(0, 0, 8, 12);
+    const f = coinFrame(t, reducedPv), bob = reducedPv ? 0 : Math.round(Math.sin(t * 4) * 1.5);
+    lctx.drawImage(baked(`coin${f}`, COIN_FRAMES[f], PAL_COIN), 0, 2 + bob);
+  });
+  rowOf(sec, [live, ...COIN_FRAMES.map((f, i) => figure(`${i}`, 8, S, sprite(`coin${i}`, f, PAL_COIN), 8))]);
+
+  heading(sec, `보물상자 32x28 ×${S} — 닫힘 / 열림1 / 열림2 / 열림+빛 · 닫힘+근접 반짝임`);
+  const names = ["closed", "open1", "open2", "openGlow"];
+  const near = figure(`closed + near (1px 점멸${reducedPv ? " → reduced: 계속 켜짐" : ""})`, 32, S, () => {}, 28);
+  const nctx = near.querySelector("canvas").getContext("2d");
+  ticks.push((t) => {
+    nctx.clearRect(0, 0, 32, 28);
+    Sprites.drawChest(nctx, { x: -6, y: -8, w: 44, h: 36 }, { opened: false, openT: 0, near: true }, t);
+  });
+  rowOf(sec, [...CHEST_FRAMES.map((f, i) => figure(names[i], 32, S, sprite(`chest${i}`, f, PAL_CHEST), 28)), near]);
+
+  heading(sec, `구름 3종 ×${Math.max(2, S / 2)} (시간대 불변 색, 게임에선 cloudA 불투명도)`);
+  rowOf(sec, CLOUDS.map((c, i) => figure(`cloud ${i} ${c[0].length}x${c.length}`, c[0].length, Math.max(2, S / 2), (ctx) => {
+    ctx.fillStyle = "#b9c9dc";
+    ctx.fillRect(0, 0, c[0].length, c.length);
+    sprite(`cloud${i}`, c, PAL_CLOUD)(ctx);
+  }, c.length)));
+
+  heading(sec, `나무 ${TREES.length}종 ×${S} — 진행도 p=0 저녁 / 0.5 새벽 / 1 오전 (skyAt trunk·leaf·leafHi·leafSh)`);
+  for (const [p, name] of PROGRESS) {
+    const pal = treePal(p), s = skyAt(p);
+    rowOf(sec, TREES.map((t, i) => figure(`p=${p} ${name} · tree ${i} ${t[0].length}x${t.length}`, t[0].length + 4, S, (ctx) => {
+      ctx.fillStyle = s.near;
+      ctx.fillRect(0, 0, t[0].length + 4, t.length + 2);
+      ctx.drawImage(baked(`pv.tree${i}.${p}`, t, pal), 2, 2);
+    }, t.length + 2)));
+  }
+
+  // 실제 장면: 진짜 Game + Sprites(오디오 스텁). title 상태로 두면 update가 animT만 올린다(물리 정지).
+  const scale = +(q.get("ss") || 2);
+  const scene = (w, label, setup) => {
+    const fig = figure(label, w, scale, () => {});
+    const ctx = fig.querySelector("canvas").getContext("2d");
+    const g = new Game({ ctx, level: LEVEL, sprites: Sprites, audio: {}, input: {}, reduced: reducedPv });
+    g.viewW = w;
+    setup?.(g);
+    ticks.push((t, dt) => { g.update(dt); g.render(); });
+    return fig;
+  };
+  const atChest = (g) => {
+    const c = LEVEL.chest;
+    g.player.x = c.x + 4; g.player.y = 230 - g.player.h; g.player.grounded = true;
+    g.cam.x = Math.max(0, Math.min(g.player.x + g.player.w / 2 - g.viewW / 2, LEVEL.worldWidth - g.viewW));
+    g.atChest = true;
+  };
+  const startCam = (x) => (g) => { g.cam.x = Math.max(0, Math.min(x, LEVEL.worldWidth - g.viewW)); };
+  heading(sec, `실제 장면 ×${scale} — 시작(cam 0)`);
+  rowOf(sec, WIDTHS.map((w) => scene(w, `w=${w} · title · cam 0`)));
+  heading(sec, `실제 장면 ×${scale} — 중간(계단 x≈880, 나무 줄·구름 패럴랙스)`);
+  rowOf(sec, WIDTHS.map((w) => scene(w, `w=${w} · cam≈${880 - w / 2}`, startCam(880 - w / 2))));
+  heading(sec, `실제 장면 ×${scale} — 상자 앞(near 반짝임) · 열림(modal)`);
+  rowOf(sec, WIDTHS.map((w) => scene(w, `w=${w} · near`, atChest)));
+  rowOf(sec, WIDTHS.map((w) => scene(w, `w=${w} · opened`, (g) => { atChest(g); g.state = "modal"; })));
+  loop();
+}
+
 // 탭 레지스트리: 이후 단계(소품 시트·플레이어 비교·이펙트)는 여기에 한 줄씩 추가.
 const TABS = [
   { id: "bg", label: "M1 배경", render: renderBg },
   { id: "tiles", label: "M2 타일", render: renderTiles },
+  { id: "props", label: "M2 소품", render: renderProps },
 ];
 
 const cur = TABS.find((t) => t.id === q.get("tab")) || TABS[0];

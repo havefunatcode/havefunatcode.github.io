@@ -4,6 +4,7 @@
 import { VIEW_H } from "./engine.js";
 import { B, skyAt } from "./art/palette.js";
 import { bake } from "./art/bake.js";
+import { CLOUDS, PAL_CLOUD, TREES, TREE_TONES } from "./art/props.js";
 
 // 능선 반복 주기(px). 최대 화면 폭 1100보다 길어야 두 장 이어 그리기로 이음새가 없다.
 export const RIDGE_PERIOD = 1280;
@@ -223,34 +224,16 @@ function drawSun(ctx, s, viewW) {
   disc(ctx, cx, cy, r - 3);
 }
 
-// ── 구름(임시 픽셀 구름 — Task 4에서 스프라이트 3종으로 교체) ───────
-function cloudPx(k) {
-  const blobs = [[0, 6, 10], [9, 2, 12], [22, 5, 10], [31, 8, 7]].map(([x, y, r]) => [x * k, y * k, Math.round(r * k)]);
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const [x, y, r] of blobs) {
-    x0 = Math.min(x0, Math.round(x) - r); y0 = Math.min(y0, Math.round(y) - r);
-    x1 = Math.max(x1, Math.round(x) + r); y1 = Math.max(y1, Math.round(y) + r);
-  }
-  const g = Array.from({ length: y1 - y0 + 1 }, () => Array(x1 - x0 + 1).fill("."));
-  for (const [bx, by, r] of blobs) {
-    for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) {
-      if (xx * xx + yy * yy > r * r + r * 0.6) continue;
-      g[Math.round(by) + yy - y0][Math.round(bx) + xx - x0] = yy > r * 0.4 ? "s" : "c";
-    }
-  }
-  return g.map((row) => row.join(""));
-}
-const CLOUD_KINDS = [1, 0.8, 0.65];
-const CLOUD_PAL = { ".": null, c: B.cloud, s: B.cloudSh };
-const cloudImgs = []; // 종류별 첫 사용 때 한 번 굽는다(픽셀 행 생성도 그때만)
-const cloudImg = (k) => cloudImgs[k] || (cloudImgs[k] = bake(cloudPx(CLOUD_KINDS[k]), CLOUD_PAL));
+// ── 구름(art/props.js 스프라이트 3종, 시간대 불변 색 + skyAt cloudA 불투명도) ───────
+const cloudImgs = []; // 종류별 첫 사용 때 한 번 굽는다
+const cloudImg = (k) => cloudImgs[k] || (cloudImgs[k] = bake(CLOUDS[k], PAL_CLOUD));
 // 주기 RIDGE_PERIOD 안의 배치(x, y, 종류)
-const CLOUDS = [[30, 26, 0], [250, 54, 1], [470, 18, 2], [690, 66, 0], [930, 36, 1], [1130, 78, 2]];
+const CLOUD_LAYOUT = [[30, 26, 0], [250, 54, 1], [470, 18, 2], [690, 66, 0], [930, 36, 1], [1130, 78, 2]];
 function drawClouds(ctx, s, cam, viewW, tt) {
   if (s.cloudA < 0.02) return;
   const off = Math.round(cam.x * PARALLAX.cloud + tt * CLOUD_DRIFT);
   ctx.globalAlpha = s.cloudA;
-  for (const [x, y, k] of CLOUDS) {
+  for (const [x, y, k] of CLOUD_LAYOUT) {
     const img = cloudImg(k);
     let sx = mod(x - off, P);
     if (sx >= viewW) sx -= P;
@@ -268,8 +251,54 @@ function drawRidge(ctx, name, base, shade, cam) {
   ctx.drawImage(img, ox + P, m.top); // P > viewW라 두 장이면 화면 전체를 덮는다
 }
 
-// ── 나무 줄(패럴랙스 0.6) — 자리만. TODO(Task 4): 나무 스프라이트 2~3종을 PARALLAX.tree로 이어 그린다. ──
-function drawTreeRow(/* ctx, s, cam, viewW */) {}
+// ── 나무 줄(패럴랙스 0.6, art/props.js 나무 3종) ─────────────────
+// 주기 P 안의 배치(x, 종류). 드문드문 무리 지어 — 배경이므로 놀이 공간을 어지럽히지 않게.
+const TREE_LAYOUT = [[24, 0], [44, 2], [180, 1], [330, 0], [349, 1], [362, 2], [540, 2], [700, 0], [716, 2],
+  [860, 1], [872, 1], [1010, 0], [1150, 2], [1166, 0]];
+// 줄기 밑동 y. 지면 윗면(230)보다 4px 아래 → 밑동은 지면 타일 뒤로 숨고, 구덩이에서는 가까운 언덕 위에 서 보인다.
+const TREE_BASE = 234;
+// 나무 줄 한 주기(P 폭)를 톤별 알파 마스크로 한 번 굽고, 색이 바뀐 프레임에만 skyAt 색으로 다시 합성한다.
+function bakeTreeRow() {
+  const h = Math.max(...TREES.map((t) => t.length));
+  const masks = TREE_TONES.map(() => canvas(P, h));
+  const data = masks.map((m) => m.getContext("2d").createImageData(P, h));
+  const toneOf = Object.fromEntries(TREE_TONES.map(([k], i) => [k, i]));
+  for (const [tx, kind] of TREE_LAYOUT) {
+    const t = TREES[kind], y0 = h - t.length;
+    for (let y = 0; y < t.length; y++)
+      for (let x = 0; x < t[y].length; x++) {
+        const i = toneOf[t[y][x]];
+        if (i === undefined) continue;
+        const X = mod(tx + x, P);
+        for (const d of data) d.data[((y0 + y) * P + X) * 4 + 3] = 0; // 겹치면 배치 순서상 나중 나무가 앞
+        data[i].data[((y0 + y) * P + X) * 4 + 3] = 255;
+      }
+  }
+  masks.forEach((m, i) => m.getContext("2d").putImageData(data[i], 0, 0));
+  const out = canvas(P, h);
+  return { out, oc: out.getContext("2d"), masks, h, key: "" };
+}
+let TR = null;
+function drawTreeRow(ctx, s, cam) {
+  const m = TR || (TR = bakeTreeRow());
+  const cols = TREE_TONES.map(([, name]) => s[name]);
+  const key = cols.join("|");
+  if (m.key !== key) {
+    m.oc.clearRect(0, 0, P, m.h);
+    m.masks.forEach((mk, i) => {
+      const c = mk.getContext("2d");
+      c.globalCompositeOperation = "source-in";
+      c.fillStyle = cols[i];
+      c.fillRect(0, 0, P, m.h);
+      c.globalCompositeOperation = "source-over";
+      m.oc.drawImage(mk, 0, 0);
+    });
+    m.key = key;
+  }
+  const ox = -mod(Math.round(cam.x * PARALLAX.tree), P), y = TREE_BASE - m.h;
+  ctx.drawImage(m.out, ox, y);
+  ctx.drawImage(m.out, ox + P, y); // P > viewW라 두 장이면 화면 전체를 덮는다
+}
 
 export function drawBackground(ctx, cam, t, viewW, progress, reduced) {
   const s = skyAt(progress);
@@ -281,5 +310,5 @@ export function drawBackground(ctx, cam, t, viewW, progress, reduced) {
   drawRidge(ctx, "mtn", s.mtn, s.mtnSh, cam);
   drawRidge(ctx, "far", s.far, s.farSh, cam);
   drawRidge(ctx, "near", s.near, s.nearSh, cam);
-  drawTreeRow(ctx, s, cam, viewW);
+  drawTreeRow(ctx, s, cam);
 }
