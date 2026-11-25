@@ -3,6 +3,7 @@ import { validateSprite } from "../js/art/check.js";
 import { B, SKY_KEYS, skyAt } from "../js/art/palette.js";
 import { PAL_TILE, GROUND, PLAT, groundVariant } from "../js/art/tiles.js";
 import { COIN_FRAMES, CHEST_FRAMES, CHEST_GLINT, CLOUDS, TREES, PAL_COIN, PAL_CHEST, PAL_CLOUD, PAL_TREE } from "../js/art/props.js";
+import { PAL_PLAYER, PLAYER_FRAMES } from "../js/art/player.js";
 import { Game } from "../js/engine.js";
 import { LEVEL } from "../js/level.js";
 
@@ -104,6 +105,39 @@ ok(PAL_TREE && ["t", "L", "h", "s"].every((k) => k in PAL_TREE), "PAL_TREE keys 
   ok(first("bg") === 0 && last("bg") < first("coin") && last("coin") < first("chest") && last("chest") < first("player") && last("player") < first("tile"),
     `render order bg→coin→chest→player→tile: ${[...new Set(calls)].join(",")}`);
   ok(calls.filter((n) => n === "tile").length === LEVEL.solids.length, "every solid drawn once");
+}
+
+// ── 플레이어(Task 8) ──
+{
+  const want = { idle: 2, walk: 6, jumpUp: 1, fall: 1, land: 1 };
+  for (const [k, n] of Object.entries(want)) {
+    const fr = PLAYER_FRAMES && PLAYER_FRAMES[k];
+    ok(Array.isArray(fr) && fr.length === n, `PLAYER_FRAMES.${k} has ${n} frames`);
+    for (const [i, f] of (fr || []).entries()) {
+      const e = validateSprite(f, PAL_PLAYER, { w: 16, h: 24 });
+      ok(e.length === 0, `PLAYER_FRAMES.${k}[${i}] 16x24 valid: ${e.join("; ")}`);
+      ok(f[23] && f[23].includes("f"), `PLAYER_FRAMES.${k}[${i}] row 23 has shoe pixel`);
+    }
+  }
+  ok(PAL_PLAYER && Object.values(PAL_PLAYER).every((c) => c !== "#000000" && c !== "#000"), "PAL_PLAYER has no pure black");
+}
+
+// Game.render가 this.anim을 drawPlayer에 넘긴다
+{
+  const got = [];
+  const noop = () => {};
+  const sprites = { drawBackground: noop, drawCoin: noop, drawChest: noop, drawTile: noop, drawPlayer: (c, p, a) => got.push(a) };
+  const ctx = { save() {}, restore() {}, translate() {} };
+  const g = new Game({ ctx, level: LEVEL, sprites, audio: {}, input: {} });
+  ok(g.anim === null, "anim starts null");
+  g.render();
+  ok(got[0] === null, "render passes null anim before first play update");
+  const a = { state: "walk", frame: 3, timer: 0.3 };
+  g.anim = a;
+  g.render();
+  ok(got[1] === a, "render passes this.anim to drawPlayer");
+  g.reset();
+  ok(g.anim === null, "reset clears anim");
 }
 
 console.log(`\n${fail === 0 ? "✅" : "❌"} art tests: ${pass} passed, ${fail} failed`);

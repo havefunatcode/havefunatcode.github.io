@@ -2,6 +2,8 @@
 // 핵심 물리는 순수 함수(stepPlayer/intersect)로 분리해 Node에서 단위테스트 가능.
 // 브라우저 의존성(Game 클래스)은 sprites/audio를 생성자 주입으로 받는다 → 이 모듈은 import만으로 부작용 없음.
 
+import { nextAnim } from "./anim.js";
+
 export const VIEW_W = 480;
 export const VIEW_H = 270;
 export const COIN_SIZE = 8; // 코인 스프라이트/히트박스 공유 크기(px)
@@ -144,7 +146,7 @@ export class Game {
     this.animT = 0; // 그리기 시계(모든 state에서 흐름 — 타이틀·모달 뒤에서도 코인 회전, spec §5.4)
     this.prevJump = false;
     this.atChest = false;
-    this.walkPhase = 0;
+    this.anim = null; // 플레이어 애니메이션 상태(anim.js nextAnim), 타이틀·reset 직후엔 null
   }
 
   reset() {
@@ -154,6 +156,7 @@ export class Game {
     this.coins = 0;
     this.prevJump = false;
     this.atChest = false;
+    this.anim = null;
   }
 
   update(dt) {
@@ -177,6 +180,7 @@ export class Game {
     };
 
     const ev = stepPlayer(this.player, intent, this.level, dt);
+    this.anim = nextAnim(this.anim, this.player, ev, intent, dt, { reduced: this.reduced });
     if (ev.jumped) this.audio.jump();
     if (ev.fell) this.audio.fall();
 
@@ -196,10 +200,6 @@ export class Game {
       0,
       Math.max(0, this.level.worldWidth - this.viewW)
     );
-
-    // 걷기 애니메이션 위상
-    if (intent.moveX !== 0 && this.player.grounded) this.walkPhase += dt * 10;
-    else this.walkPhase = 0;
 
     this.t += dt;
   }
@@ -227,7 +227,7 @@ export class Game {
     this.sprites.drawChest(ctx, this.level.chest, { opened: this.state === "modal", openT: 0, near: this.atChest }, this.animT);
 
     // 플레이어
-    this.sprites.drawPlayer(ctx, this.player, this.walkPhase);
+    this.sprites.drawPlayer(ctx, this.player, this.anim);
 
     // 솔리드(지면/발판) — 플레이어 다음: 히트박스 밖 머리카락이 발판 뒤로 들어가 보이게(spec §5.2)
     for (const s of this.level.solids) this.sprites.drawTile(ctx, s);

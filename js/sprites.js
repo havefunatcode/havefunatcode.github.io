@@ -4,32 +4,9 @@ import { VIEW_W } from "./engine.js";
 import { baked } from "./art/bake.js";
 import { PAL_TILE, GROUND, PLAT, groundVariant } from "./art/tiles.js";
 import { PAL_COIN, COIN_FRAMES, PAL_CHEST, CHEST_FRAMES, CHEST_GLINT } from "./art/props.js";
-import { coinFrame } from "./anim.js";
+import { PAL_PLAYER, PLAYER_FRAMES } from "./art/player.js";
+import { coinFrame, playerDrawRect } from "./anim.js";
 import { drawBackground as drawBg } from "./background.js";
-
-// ── 픽셀 스프라이트 정의 ───────────────────────────────────────
-const PAL_PLAYER = {
-  ".": null, H: "#2b2b3a", F: "#f4c8a0", E: "#14223a", m: "#b5654a",
-  B: "#4a86c5", b: "#356199", P: "#33405a", S: "#20232e",
-};
-const PLAYER_PX = [
-  "............",
-  "...HHHHHH...",
-  "..HHHHHHHH..",
-  ".HHFFFFFFHH.",
-  ".HFFFFFFFFH.",
-  ".HFEFFFFEFH.",
-  ".HFFFFFFFFH.",
-  ".HFFFmmFFFH.",
-  "..FFFFFFFF..",
-  "..BBBBBBBB..",
-  ".BBBBBBBBBB.",
-  ".BbBBBBBBbB.",
-  ".BBBBBBBBBB.",
-  ".BBBBBBBBBB.",
-  "..PPP..PPP..",
-  "..SSS..SSS..",
-];
 
 // 솔리드 1개를 (0,0) 기준 캔버스에 타일로 합성. 폭·높이는 16·8의 배수가 아니어도 된다.
 // 흙 변형 해시는 월드 열(s.x 기준)로 고른다 → 세그먼트마다 무늬가 다르다.
@@ -102,17 +79,23 @@ export const Sprites = {
     ctx.drawImage(baked(`coin${f}`, COIN_FRAMES[f], PAL_COIN), Math.round(x), Math.round(y));
   },
 
-  drawPlayer(ctx, p, walkPhase) {
-    const bob = walkPhase > 0 ? -Math.abs(Math.sin(walkPhase)) : 0;
-    ctx.save();
+  // 플레이어 16x24(js/art/player.js). anim = Game.anim {state,frame}; null(타이틀, 첫 play update 전)이면 idle 0.
+  // 좌·우향 모두 같은 16px 칸(playerDrawRect): 좌향은 칸 오른쪽 끝(flipX)에서 반전해 그린다(spec §5.2).
+  drawPlayer(ctx, p, anim) {
+    const state = anim ? anim.state : "idle";
+    const i = anim ? anim.frame : 0;
+    const frames = PLAYER_FRAMES[state] || PLAYER_FRAMES.idle;
+    const img = baked(`player:${state}:${i}`, frames[i] || frames[0], PAL_PLAYER);
+    const r = playerDrawRect(p);
     if (p.facing < 0) {
-      ctx.translate(Math.round(p.x + p.w), Math.round(p.y + bob));
+      ctx.save();
+      ctx.translate(r.flipX, r.y);
       ctx.scale(-1, 1);
-      ctx.drawImage(baked("player", PLAYER_PX, PAL_PLAYER), 0, 0);
+      ctx.drawImage(img, 0, 0);
+      ctx.restore();
     } else {
-      ctx.drawImage(baked("player", PLAYER_PX, PAL_PLAYER), Math.round(p.x), Math.round(p.y + bob));
+      ctx.drawImage(img, r.x, r.y);
     }
-    ctx.restore();
   },
 
   // 상자 32x28을 히트박스 44x36 하단 중앙에(spec §5.5). 프레임 0 닫힘 / 1 열림1 / 2 열림2 / 3 열림+빛.
