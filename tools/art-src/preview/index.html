@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Art Preview</title>
+<style>
+  :root { --bg: #1e1f2b; --fg: #e8e4dc; --dim: #9a96a8; --line: #34364a; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; }
+  nav a { color: var(--dim); text-decoration: none; margin-right: 12px; }
+  nav a.on { color: var(--fg); border-bottom: 2px solid var(--fg); }
+  main { padding: 16px; }
+  section[hidden] { display: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { color: var(--dim); font-size: 12px; margin-bottom: 4px; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  h2 { font-size: 14px; color: var(--dim); font-weight: 600; margin: 0 0 8px; }
+  .hint { color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>픽셀 아트 미리보기</h1>
+  <nav id="tabs"></nav>
+  <span class="hint">?tab=bg&amp;w=270|480|1100&amp;p=0|0.5|1&amp;s=배율</span>
+</header>
+<main id="main"></main>
+<script type="module">
+// 개발용 미리보기(빌드 없음, 외부 에셋 없음). 단계별 탭을 TABS에 추가해 확장한다.
+import { drawBackground } from "../../../js/background.js";
+import { VIEW_H } from "../../../js/engine.js";
+import { LEVEL } from "../../../js/level.js";
+
+const q = new URLSearchParams(location.search);
+const WIDTHS = [270, 480, 1100];
+const PROGRESS = [[0, "저녁"], [0.5, "새벽"], [1, "오전"]];
+
+function figure(label, w, scale, draw) {
+  const fig = document.createElement("figure");
+  const cap = document.createElement("figcaption");
+  cap.textContent = label;
+  const cv = document.createElement("canvas");
+  cv.width = w;
+  cv.height = VIEW_H;
+  cv.style.width = w * scale + "px";
+  cv.style.height = VIEW_H * scale + "px";
+  const ctx = cv.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  draw(ctx);
+  fig.append(cap, cv);
+  return fig;
+}
+
+// ── M1: 배경 ─────────────────────────────────────────────────
+function bgFigure(w, p, scale) {
+  // 게임과 같은 카메라: 진행도 p = cam.x / (worldWidth - viewW)
+  const cam = { x: p * Math.max(0, LEVEL.worldWidth - w), y: 0 };
+  const name = PROGRESS.find(([v]) => v === p)?.[1] ?? "";
+  return figure(`w=${w} · p=${p} ${name} · cam.x=${Math.round(cam.x)}`, w, scale, (ctx) =>
+    drawBackground(ctx, cam, 0, w, p, true));
+}
+function renderBg(sec) {
+  const w = q.has("w") ? +q.get("w") : null, p = q.has("p") ? +q.get("p") : null;
+  if (w !== null || p !== null) {
+    const row = document.createElement("div");
+    row.className = "row";
+    for (const ww of w !== null ? [w] : WIDTHS)
+      for (const pp of p !== null ? [p] : PROGRESS.map(([v]) => v)) row.append(bgFigure(ww, pp, +(q.get("s") || 3)));
+    sec.append(row);
+    return;
+  }
+  const scale = +(q.get("s") || 2);
+  for (const [pp, name] of PROGRESS) {
+    const h = document.createElement("h2");
+    h.textContent = `p=${pp} ${name}`;
+    const row = document.createElement("div");
+    row.className = "row";
+    for (const ww of WIDTHS) row.append(bgFigure(ww, pp, scale));
+    sec.append(h, row);
+  }
+}
+
+// 탭 레지스트리: 이후 단계(소품 시트·플레이어 비교·이펙트)는 여기에 한 줄씩 추가.
+const TABS = [
+  { id: "bg", label: "M1 배경", render: renderBg },
+];
+
+const cur = TABS.find((t) => t.id === q.get("tab")) || TABS[0];
+const nav = document.getElementById("tabs"), main = document.getElementById("main");
+for (const t of TABS) {
+  const a = document.createElement("a");
+  a.href = `?tab=${t.id}`;
+  a.textContent = t.label;
+  if (t === cur) a.className = "on";
+  nav.append(a);
+}
+const sec = document.createElement("section");
+sec.id = `tab-${cur.id}`;
+main.append(sec);
+cur.render(sec);
+</script>
+</body>
+</html>
