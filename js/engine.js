@@ -3,11 +3,13 @@
 // 브라우저 의존성(Game 클래스)은 sprites/audio를 생성자 주입으로 받는다 → 이 모듈은 import만으로 부작용 없음.
 
 import { nextAnim } from "./anim.js";
+import { createFxLayer } from "./fx.js";
 
 export const VIEW_W = 480;
 export const VIEW_H = 270;
 export const COIN_SIZE = 8; // 코인 스프라이트/히트박스 공유 크기(px)
 export const OPEN_SEC = 0.6; // 상자 열림 시퀀스 길이(초)
+export const LAND_FX_MIN_VY = 200; // 이 착지 속도(px/s) 미만이면 착지 먼지 생략(리스폰 직후 작은 touchdown 등, spec §5.7)
 
 // 물리 상수 (단위: px, 초)
 export const PHYS = {
@@ -128,10 +130,10 @@ export function makePlayer(level) {
 }
 
 // ───────────────────────────────────────────────────────────────
-// 브라우저 전용 게임 컨트롤러 (sprites/audio 주입)
+// 브라우저 전용 게임 컨트롤러 (sprites/audio/fx 주입)
 // ───────────────────────────────────────────────────────────────
 export class Game {
-  constructor({ ctx, level, sprites, audio, input, reduced = false, onCoin, onTreasure, onOpening }) {
+  constructor({ ctx, level, sprites, audio, input, reduced = false, fx, onCoin, onTreasure, onOpening }) {
     this.ctx = ctx;
     this.level = level;
     this.sprites = sprites;
@@ -142,6 +144,7 @@ export class Game {
     this.onCoin = onCoin;
     this.onTreasure = onTreasure;
     this.onOpening = onOpening;
+    this.fx = fx ?? createFxLayer({ reduced }); // 앞 이펙트 레이어(reduced면 spawn이 no-op)
 
     this.state = "title"; // 'title' | 'play' | 'opening' | 'modal'
     this.player = makePlayer(level);
@@ -181,6 +184,8 @@ export class Game {
   update(dt) {
     dt = Math.min(dt, 1 / 30); // 탭 전환 등 거대 dt 방지(opening이 한 프레임에 끝나지 않게)
     this.animT += dt;
+    // 이펙트는 play와 opening(0.6초 연출 중에도 계속)에서만 흐른다
+    if (this.state === "play" || this.state === "opening") this.fx.update(dt);
 
     // opening 중에도 점프 엣지를 계속 추적 → 누른 채 도착해도 새 엣지가 아니면 스킵되지 않음
     const jumpEdge = this.input.jump && !this.prevJump;
@@ -211,6 +216,8 @@ export class Game {
         this.openTimer = 0;
         this.openFired = false;
         this.state = "opening";
+        const ch = this.level.chest;
+        this.fx.spawn("chest", ch.x + 22, ch.y + 8); // 상자 스프라이트(32x28) 윗변 가운데
         this.onOpening?.();
       }
       return;
@@ -224,6 +231,10 @@ export class Game {
     const ev = stepPlayer(this.player, intent, this.level, dt);
     this.anim = nextAnim(this.anim, this.player, ev, intent, dt, { reduced: this.reduced });
     if (ev.jumped) this.audio.jump();
+    if (ev.touchdown && ev.impactVy >= LAND_FX_MIN_VY) {
+      const p = this.player;
+      this.fx.spawn("land", p.x + p.w / 2, p.y + p.h, { impactVy: ev.impactVy });
+    }
     if (ev.fell) this.audio.fall();
 
     // 코인 수집
@@ -232,6 +243,7 @@ export class Game {
         c.got = true;
         this.coins++;
         this.audio.coin();
+        this.fx.spawn("coin", c.x + COIN_SIZE / 2, c.y + COIN_SIZE / 2);
         this.onCoin?.(c.project);
       }
     }
@@ -275,9 +287,10 @@ export class Game {
     // 솔리드(지면/발판) — 플레이어 다음: 히트박스 밖 머리카락이 발판 뒤로 들어가 보이게(spec §5.2)
     for (const s of this.level.solids) this.sprites.drawTile(ctx, s);
 
-    // 앞 이펙트 자리(spec §5.2 순서: 배경 → 코인·상자 → 플레이어 → 타일 → 앞 이펙트)
-
     ctx.restore();
+
+    // 앞 이펙트(spec §5.2 순서: 배경 → 코인·상자 → 플레이어 → 타일 → 앞 이펙트). 카메라는 fx.draw가 직접 반영
+    this.fx.draw(ctx, cam);
     // HUD/힌트/안내 텍스트는 DOM(ui.js)에서 렌더 — 픽셀화 캔버스 텍스트 깨짐 방지
   }
 }

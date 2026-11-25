@@ -50,6 +50,15 @@ import { coinFrame, playerDrawRect, IDLE_STEP, WALK_FPS, WALK_FRAME_COUNT, LAND_
 import { PAL_PLAYER as PAL_CODIXEL, PLAYER_FRAMES as FR_CODIXEL } from "../player/codixel/frames.mjs";
 import { PAL_PLAYER as PAL_PIXELBOLT, PLAYER_FRAMES as FR_PIXELBOLT } from "../player/pixelbolt/frames.mjs";
 import { GLASSES_VARIANTS, GLASSES_PICK } from "../player/pixelbolt/glasses-variants.mjs";
+import { PAL_PLAYER, PLAYER_FRAMES } from "../../../js/art/player.js";
+import { createFrame, clearFrame, createFx, composite, painterFor, sparkle, hex } from "../../../js/vendor/pixelfx/core/index.js";
+import * as fxCollectBurst from "../../../js/vendor/pixelfx/fx/pickups/collect-burst.js";
+import * as fxHeavyLanding from "../../../js/vendor/pixelfx/fx/impacts/heavy-landing.js";
+import { glint, twinkle } from "../../../js/vendor/pixelfx/fx/pickups/_lib.js";
+import * as fxCoin from "../../../js/vendor/pixelfx/fx/custom/coin-burst-s.js";
+import * as fxLand from "../../../js/vendor/pixelfx/fx/custom/land-dust-s.js";
+import * as fxChest from "../../../js/vendor/pixelfx/fx/custom/chest-glint-s.js";
+import { createFxLayer } from "../../../js/fx.js";
 
 const q = new URLSearchParams(location.search);
 const WIDTHS = [270, 480, 1100];
@@ -375,12 +384,174 @@ function renderPlayer(sec) {
   loop();
 }
 
+// ── M4: 이펙트(pixelfx 원본 vs 축소 변형) ─────────────────────
+const GAME_SET = { name: "game", pal: PAL_PLAYER, fr: PLAYER_FRAMES };
+const FX_BG = "#b9c9dc"; // B.sky5[1] — 게임 하늘 톤 위에서 본다
+const FX_GAP = 0.45; // 한 번 끝나고 다시 시작하기까지(초)
+// 일회성 이펙트를 반복 재생하는 작은 플레이어: meta.size frame → 오프스크린 캔버스
+function fxLooper(mod, opts = {}, layer) {
+  const [w, h] = mod.meta.size, [ox, oy] = mod.meta.origin;
+  const frame = createFrame(w, h, 0, 0), img = new ImageData(w, h);
+  const cv = Object.assign(document.createElement("canvas"), { width: w, height: h }), cx = cv.getContext("2d");
+  let fx = null, wait = 0;
+  return {
+    w, h, ox, oy, cv,
+    step(dt) {
+      if (!fx) fx = createFx(mod, { x: ox, y: oy, ...opts });
+      else if (fx.done()) {
+        if ((wait += dt) > FX_GAP) { fx = createFx(mod, { x: ox, y: oy, ...opts }); wait = 0; }
+      } else fx.update(dt);
+      clearFrame(frame);
+      fx.draw(frame, layer); // 원본은 back+front 둘 다, 변형은 front만
+      composite(frame, img.data, null);
+      cx.putImageData(img, 0, 0);
+    },
+  };
+}
+// 패널: 배경색 + 16x24 플레이어(크기 비교) + 소품 + 이펙트. scale은 CSS 배율(1x/4x).
+// pad로 이펙트 frame 둘레를 넓혀 플레이어·상자가 잘리지 않게 한다. playerAt·under는 이펙트 원점(ex, ey) 기준.
+function fxPanel(label, L, scale, playerAt, { l = 0, t = 0, r = 0, b = 0, under } = {}) {
+  const W = L.w + l + r, H = L.h + t + b, ex = l + L.ox, ey = t + L.oy;
+  const fig = figure(label, W, scale, () => {}, H);
+  const ctx = fig.querySelector("canvas").getContext("2d");
+  return { fig, draw(now) {
+    ctx.fillStyle = FX_BG;
+    ctx.fillRect(0, 0, W, H);
+    under?.(ctx, ex, ey, now);
+    if (playerAt) {
+      const [px, py] = playerAt(ex, ey);
+      drawPlayer(ctx, GAME_SET, "idle", 0, { x: px, y: py, w: 12, h: 20, facing: 1 });
+    }
+    ctx.drawImage(L.cv, l, t);
+  } };
+}
+// 열린 상자(32x28): 히트박스 원점 = 스폰점 − (22, 8)
+const openChestUnder = (ctx, ex, ey, now) => Sprites.drawChest(ctx, { x: ex - 22, y: ey - 8, w: 44, h: 36 }, { opened: true, openT: 1 }, now);
+// 원본 헬퍼(glint·twinkle·sparkle)를 그대로 그린 비교용 루프 — 심장 픽셀이 WHITE
+function helperLooper() {
+  const w = 48, h = 40, frame = createFrame(w, h, 0, 0), img = new ImageData(w, h);
+  const cv = Object.assign(document.createElement("canvas"), { width: w, height: h }), cx = cv.getContext("2d");
+  const C = ["#f53cd1", "#ff86e6"].map(hex); // pixelfx 기본(마젠타) 계열
+  let t = 0;
+  return { w, h, ox: 24, oy: 26, cv, step(dt) {
+    t = (t + dt) % 1.2;
+    const arm = Math.round(4 * Math.sin(Math.PI * Math.min(1, t / 0.8)));
+    const p = painterFor(clearFrame(frame));
+    glint(p, 10, 14, arm, C[0], 0.4);
+    twinkle(p, 24, 14, arm + 1, C[0], C[1]);
+    sparkle(p, 38, 14, arm, C[1], C[0], 0.6);
+    composite(frame, img.data, null);
+    cx.putImageData(img, 0, 0);
+  } };
+}
+
+function renderFx(sec) {
+  const note = document.createElement("p");
+  note.className = "hint";
+  note.textContent = reducedPv
+    ? "reduced 모드(?reduced=1 또는 OS 설정): 게임 레이어(createFxLayer)의 spawn이 no-op → 아래 '실제 장면'에는 이펙트가 하나도 없다. 원본·변형 루프는 비교용이라 계속 재생."
+    : "reduced 확인: 주소에 ?tab=fx&reduced=1 — 게임 레이어는 이펙트를 전부 끈다(아래 '실제 장면'이 비어야 정상). 원본·변형 루프는 비교용.";
+  sec.append(note);
+
+  const loopers = [];
+  const pairs = [
+    {
+      title: "코인 획득 — 원본 pickups/collect-burst (112x108, 1.35s) vs coin-burst-s (44x44, 0.7s)",
+      orig: fxLooper(fxCollectBurst), origPlayer: (x, y) => [x - 30, y - 20],
+      vari: fxLooper(fxCoin, {}, "front"), variPlayer: (x, y) => [x - 16, y - 6],
+    },
+    {
+      title: "착지 먼지 — 원본 impacts/heavy-landing (176x80, 1.6s) vs land-dust-s (40x18, 0.9s, impactVy 520)",
+      orig: fxLooper(fxHeavyLanding), origPlayer: (x, y) => [x - 6, y - 20],
+      vari: fxLooper(fxLand, {}, "front"), variPlayer: (x, y) => [x - 6, y - 20], pad: { t: 12 },
+    },
+    {
+      title: "상자 반짝임 — 원본 헬퍼 glint · twinkle · core sparkle (WHITE 심장) vs chest-glint-s (48x40, 0.6s)",
+      orig: helperLooper(), origPlayer: null,
+      vari: fxLooper(fxChest, {}, "front"), variPlayer: (x, y) => [x - 40, y + 8], pad: { l: 20, b: 14, under: openChestUnder },
+    },
+  ];
+  const panels = [];
+  for (const pr of pairs) {
+    heading(sec, pr.title);
+    const row = document.createElement("div");
+    row.className = "row";
+    for (const [lab, L, pa, pad] of [["원본", pr.orig, pr.origPlayer], ["변형", pr.vari, pr.variPlayer, pr.pad]])
+      for (const s of [1, 4]) {
+        const P = fxPanel(`${lab} ${L.w}x${L.h} ×${s}${pa ? " · 16x24 플레이어" : ""}`, L, s, pa, pad);
+        panels.push(P);
+        row.append(P.fig);
+      }
+    sec.append(row);
+    loopers.push(pr.orig, pr.vari);
+  }
+  // 착지 세기 비교: impactVy 250 / 520 / 820
+  heading(sec, "land-dust-s 세기 ∝ impactVy — 250 · 520 · 820 (×4)");
+  const r2 = document.createElement("div");
+  r2.className = "row";
+  for (const v of [250, 520, 820]) {
+    const L = fxLooper(fxLand, { impactVy: v }, "front");
+    const P = fxPanel(`impactVy ${v}`, L, 4, (x, y) => [x - 6, y - 20], { t: 12 });
+    loopers.push(L);
+    panels.push(P);
+    r2.append(P.fig);
+  }
+  sec.append(r2);
+
+  // 실제 장면: 진짜 createFxLayer + Sprites, 상자 앞(월드 x 2200~2420, y 160~240). 2.4초 주기로
+  // 0.3s 코인 획득 → 0.9s 착지(impactVy 600) → 1.4s 상자 열림(0.6s)
+  const X0 = 2200, Y0 = 160, W = 220, H = 80, CYC = 2.4;
+  const coin = { x: 2300, y: 204 };
+  const pl = { x: 2326, y: 230 - 20, w: 12, h: 20, facing: 1 };
+  const scenes = [1, 3].map((s) => {
+    const fig = figure(`실제 장면 ×${s} — createFxLayer({ reduced: ${reducedPv} })`, W, s, () => {}, H);
+    return { fig, ctx: fig.querySelector("canvas").getContext("2d"), layer: createFxLayer({ reduced: reducedPv }), prev: 0 };
+  });
+  heading(sec, `실제 장면 — 코인 0.3s · 착지 0.9s · 상자 1.4s (${CYC}s 주기)`);
+  const r3 = document.createElement("div");
+  r3.className = "row";
+  r3.append(...scenes.map((s) => s.fig));
+  sec.append(r3);
+
+  ticks.push((t, dt) => {
+    for (const L of loopers) L.step(dt);
+    for (const P of panels) P.draw(t);
+    for (const S of scenes) {
+      const c = t % CYC, prev = S.prev;
+      const crossed = (at) => (prev < at && c >= at) || (prev > c && c >= at);
+      if (crossed(0.3)) S.layer.spawn("coin", coin.x + 4, coin.y + 4);
+      if (crossed(0.9)) S.layer.spawn("land", pl.x + pl.w / 2, pl.y + pl.h, { impactVy: 600 });
+      if (crossed(1.4)) S.layer.spawn("chest", LEVEL.chest.x + 22, LEVEL.chest.y + 8);
+      S.prev = c;
+      S.layer.update(dt);
+      const ctx = S.ctx;
+      ctx.save();
+      ctx.translate(0, -Y0);
+      drawBackground(ctx, { x: X0, y: 0 }, t, W, 1, true);
+      ctx.translate(-X0, 0);
+      if (c < 0.3) Sprites.drawCoin(ctx, coin.x, coin.y, t);
+      const opened = c >= 1.4, openT = Math.min(1, (c - 1.4) / 0.6);
+      Sprites.drawChest(ctx, LEVEL.chest, { opened, openT, near: true }, t);
+      const landing = c >= 0.9 && c < 0.98;
+      drawPlayer(ctx, GAME_SET, landing ? "land" : "idle", 0, pl);
+      for (const s of LEVEL.solids) if (s.x < X0 + W && s.x + s.w > X0) Sprites.drawTile(ctx, s);
+      ctx.restore();
+      ctx.save();
+      ctx.translate(0, -Y0);
+      S.layer.draw(ctx, { x: X0 });
+      ctx.restore();
+    }
+  });
+  loop();
+}
+
 // 탭 레지스트리: 이후 단계(소품 시트·플레이어 비교·이펙트)는 여기에 한 줄씩 추가.
 const TABS = [
   { id: "bg", label: "M1 배경", render: renderBg },
   { id: "tiles", label: "M2 타일", render: renderTiles },
   { id: "props", label: "M2 소품", render: renderProps },
   { id: "player", label: "M3 플레이어 비교", render: renderPlayer },
+  { id: "fx", label: "M4 이펙트", render: renderFx },
 ];
 
 const cur = TABS.find((t) => t.id === q.get("tab")) || TABS[0];
